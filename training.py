@@ -1,7 +1,7 @@
 import time
 import logging
 import warnings
-
+import torch
 
 class Trainer:
     """Trainer

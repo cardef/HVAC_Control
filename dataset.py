@@ -18,7 +18,7 @@ import gc
 import re
 from sklearn.experimental import enable_iterative_imputer
 from sklearn.impute import IterativeImputer , KNNImputer, SimpleImputer
-from utils import *
+from utils import col_out_to_index
 
 
 class Dataset(Dataset):
