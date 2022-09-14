@@ -25,7 +25,7 @@ class Trainer:
     val_loss_ : list
     
     """
-    def __init__(self, model, criterion, optimizier, scheduler, logger_kwargs, device = None):
+    def __init__(self, model, criterion, optimizer, scheduler, logger_kwargs, device = None):
 
         self.model = model
         self.criterion = criterion
