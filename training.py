@@ -117,7 +117,7 @@ class Trainer:
         loss_ = []
         for features, ground_truth in loader:
             # move to device
-            features, labels = self._to_device(features, ground_truth, self.device, dtype = torch.float)
+            features, labels = self._to_device(features, ground_truth, self.device)
             
             # forward pass
             out = self.model(features)
@@ -138,7 +138,7 @@ class Trainer:
         return loss_.mean()
     
     def _to_device(self, features, ground_truth, device):
-        return features.to(device), ground_truth.to(device)
+        return features.to(device, dtype = torch.float), ground_truth.to(device, dtype = torch.float)
     
     def _validate(self, loader):
         self.model.eval()
@@ -150,7 +150,6 @@ class Trainer:
                     features, 
                     ground_truth, 
                     self.device,
-                    dtype = torch.float
                 )
                 
                 out = self.model(features)
