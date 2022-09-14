@@ -117,7 +117,7 @@ class Trainer:
         loss_ = []
         for features, ground_truth in loader:
             # move to device
-            features, labels = self._to_device(features, ground_truth, self.device)
+            features, labels = self._to_device(features, ground_truth, self.device, dtype = torch.float)
             
             # forward pass
             out = self.model(features)
@@ -149,7 +149,8 @@ class Trainer:
                 features, ground_truth = self._to_device(
                     features, 
                     ground_truth, 
-                    self.device
+                    self.device,
+                    dtype = torch.float
                 )
                 
                 out = self.model(features)
