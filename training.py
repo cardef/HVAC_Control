@@ -114,7 +114,7 @@ class Trainer:
     
     def _train(self, loader):
         self.model.train()
-        
+        loss_ = []
         for features, ground_truth in loader:
             # move to device
             features, labels = self._to_device(features, ground_truth, self.device)
@@ -123,7 +123,8 @@ class Trainer:
             out = self.model(features)
             
             # loss
-            loss = self._compute_loss(out, ground_truth)
+            loss = (self._compute_loss(out, ground_truth))
+            loss_.append(loss.item())
             
             # remove gradient from previous passes
             self.optimizer.zero_grad()
@@ -134,14 +135,14 @@ class Trainer:
             # parameters update
             self.optimizer.step()
             
-        return loss.item()
+        return loss_.mean()
     
     def _to_device(self, features, ground_truth, device):
         return features.to(device), ground_truth.to(device)
     
     def _validate(self, loader):
         self.model.eval()
-        
+        loss_ = []
         with torch.no_grad():
             for features, ground_truth in loader:
                 # move to device
@@ -153,8 +154,8 @@ class Trainer:
                 
                 out = self.model(features)
                 loss = self._compute_loss(out, ground_truth)
-                
-        return loss.item()
+                loss_.append(loss.item())
+        return loss_.mean()
     
     def _compute_loss(self, real, target):
         try:
