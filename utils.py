@@ -1,24 +1,6 @@
-from socket import INADDR_ANY
-import torch
-import seaborn as sns
-import torch.nn as nn
-import torch.nn.functional as F
-from torch.optim import Adam
-from torch.optim.lr_scheduler import ReduceLROnPlateau
-from torch.utils.data import Dataset, DataLoader
-
-#!pip install fancyimpute
-import csv
 import numpy as np
 import pandas as pd
-from pandas import Series
-import datetime
-import time
-import os
-import gc
-import re
-from sklearn.experimental import enable_iterative_imputer
-from sklearn.impute import IterativeImputer , KNNImputer, SimpleImputer
+import torch
 
 
 def split_seq(df, time_window, len_forecast, col_out):
@@ -31,7 +13,7 @@ def split_seq(df, time_window, len_forecast, col_out):
         
         if end_ix+len_forecast > len(df):
             break
-        seq_x, seq_y = df[i:end_ix], df[end_ix:end_ix+len_forecast, col_out_in]
+        seq_x, seq_y = df[i:end_ix], df[end_ix:end_ix+len_forecast, col_out]
         seq.append((seq_x.transpose(0,1), seq_y))
     return seq
 
