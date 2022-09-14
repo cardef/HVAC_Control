@@ -159,9 +159,9 @@ class Trainer:
     
     def _compute_loss(self, real, target):
         try:
-            loss = self.criterion(real, target)
+            loss = self.criterion(real, target.squeeze())
         except:
-            loss = self.criterion(real, target.long())
+            loss = self.criterion(real, target.squeeze().long())
             msg = f"Target tensor has been casted from"
             msg = f"{msg} {type(target)} to 'long' dtype to avoid errors."
             warnings.warn(msg)
