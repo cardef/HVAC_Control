@@ -123,7 +123,7 @@ class Trainer:
             out = self.model(features)
             
             # loss
-            loss = (self._compute_loss(out.float(), ground_truth))
+            loss = (self._compute_loss(out.float(), ground_truth.float()))
             loss_.append(loss.item())
             
             # remove gradient from previous passes
@@ -153,7 +153,7 @@ class Trainer:
                 )
                 
                 out = self.model(features)
-                loss = self._compute_loss(out, ground_truth)
+                loss = self._compute_loss(out.float(), ground_truth.float())
                 loss_.append(loss.item())
         return loss_.mean()
     
