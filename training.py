@@ -149,7 +149,7 @@ class Trainer:
                 features, ground_truth = self._to_device(
                     features, 
                     ground_truth, 
-                    self.device,
+                    self.device
                 )
                 
                 out = self.model(features)
