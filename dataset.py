@@ -44,11 +44,10 @@ path_cleaned = r'C:\Users\cdellefemine\Documents\GitHub\HVAC-Control\dataset'
 energy_df = merge(path_raw, en+outdoor+hvac_op)
 energy_df['hvac'] = energy_df['hvac_S']+energy_df['hvac_N']
 energy_df = remove_outliers(energy_df)
-energy_train_set, energy_valid_set, energy_test_set = split(energy_df)
+energy_train_set, energy_test_set = split(energy_df)
 
 energy_train_set.to_csv(os.path.join(path_cleaned, 'energy\train_set.csv'), index = False)
 energy_test_set.to_csv(os.path.join(path_cleaned, 'energy\test_set.csv'), index = False)
-energy_valid_set.to_csv(os.path.join(path_cleaned, 'energy\valid_set.csv'), index = False)
 
 costant_col = energy_train_set.columns[energy_train_set.nunique() <= 1]
 train_set = energy_train_set.drop(costant_col, axis = 1)

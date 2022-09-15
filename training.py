@@ -71,7 +71,6 @@ class Trainer:
             
             # validate
             val_loss = self._validate(val_loader)
-            print(epoch, tr_loss, val_loss)
             self.train_loss_.append(tr_loss)
             self.val_loss_.append(val_loss)
             self.scheduler.step(val_loss)
@@ -182,3 +181,8 @@ class Trainer:
             dev = device
 
         return dev
+
+    def save_checkpoint(path, epoch, model, optimizer):
+        torch.save({'epoch': epoch, 'model_state_dict': model.state_dict(),
+            'optimizer_state_dict': optimizer.state_dict()}, path)
+

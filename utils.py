@@ -1,6 +1,7 @@
 import numpy as np
 import pandas as pd
 import torch
+from easydict import EasyDict
 
 
 def split_seq(df, time_window, len_forecast, col_out):
@@ -51,14 +52,12 @@ def imputation(df, imputer, fit = False):
         return pd.DataFrame(imputer.transform(df), columns = df.columns)
 
 
-def split(df, train_size = 0.7, test_size = 0.2):
+def split(df, train_size = 0.8):
     train_indices = np.ceil(len(df)*train_size).astype(int)
-    test_indices = np.ceil(len(df)*test_size).astype(int)
     train_set = df[:train_indices]
-    test_set = df[train_indices:train_indices+test_indices]
-    valid_set = df[train_indices+test_indices:]
+    test_set = df[train_indices:]
 
-    return train_set, valid_set, test_set
+    return train_set, test_set
 
 def col_out_to_index(df, col_out):
     col_out_in = {}
@@ -67,3 +66,21 @@ def col_out_to_index(df, col_out):
         col_out_in[col] = (in_x, i)
 
     return col_out_in
+
+def get_config_from_json(json_file):
+    """
+    Get the config from a json file
+    :param json_file: the path of the config file
+    :return: config(namespace), config(dictionary)
+    """
+
+    # parse the configurations from the config json file provided
+    with open(json_file, 'r') as config_file:
+        try:
+            config_dict = json.load(config_file)
+            # EasyDict allows to access dict values as attributes (works recursively).
+            config = EasyDict(config_dict)
+            return config, config_dict
+        except ValueError:
+            print("INVALID JSON file format.. Please provide a good json file")
+            exit(-1)

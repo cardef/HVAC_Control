@@ -11,16 +11,17 @@ def evaluation(model, df, sequences, criterion, col_out):
     device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
 
     for i, seq in enumerate(sequences):
+            model.to(device)
             pred_seq = model(seq[0].unsqueeze(0).to(device)).squeeze(0)
 
-            loss.append(criterion(seq[1], pred_seq).item())
+            loss.append(criterion(seq[1].to(device), pred_seq.to(device)).item())
 
             pred_seq = np.array(pred_seq.detach().cpu())
             prediction.append(pred_seq)
             #timestamp.extend(range(i,i+seq.size(1)))
             time_window = seq[0].size(0)
             len_forecast = seq[1].size(0)
-            timestamp_seq = list(df['timestamp'][time_window+i:time_window+i+len_forecast])
+            timestamp_seq = list(df['date'][time_window+i:time_window+i+len_forecast])
             timestamp.extend(timestamp_seq)
     res = pd.DataFrame(prediction, columns = col_out)
     res['timestamp'] = timestamp
