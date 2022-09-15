@@ -19,12 +19,12 @@ def split_seq(df, time_window, len_forecast, col_out):
 
 
 def merge(path, csv_list):
-    df = pd.read_csv(path + csv_list[0])
+    df = pd.read_csv(path + '\\'+ csv_list[0])
     df['date'] = pd.to_datetime(df['date'])
     df = df.drop_duplicates(subset = ['date'], keep='first')
-    df['date'] = pd.date_range(min(df['date']), max(df['date']), freq = '15min')
+    df['date'] = pd.Series(pd.date_range(min(df['date']), max(df['date']), freq = '15min'))
     for dataframe_name in csv_list[1:]:
-        dataframe = pd.read_csv(path + dataframe_name)
+        dataframe = pd.read_csv(path + '\\' + dataframe_name)
         dataframe['date']  = pd.to_datetime(dataframe['date'])
         dataframe = dataframe.drop_duplicates(subset = ['date'], keep = 'first')
         df = pd.merge_asof(df, dataframe, on = 'date', tolerance = pd.Timedelta('10min'))

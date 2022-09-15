@@ -2,6 +2,7 @@ import time
 import logging
 import warnings
 import torch
+from statistics import mean
 
 class Trainer:
     """Trainer
@@ -30,7 +31,7 @@ class Trainer:
         self.model = model
         self.criterion = criterion
         self.optimizer = optimizer
-        self.schduler = scheduler
+        self.scheduler = scheduler
         self.logger_kwargs = logger_kwargs
         self.device = self._get_device(device)
         
@@ -70,7 +71,7 @@ class Trainer:
             
             # validate
             val_loss = self._validate(val_loader)
-            
+            print(epoch, tr_loss, val_loss)
             self.train_loss_.append(tr_loss)
             self.val_loss_.append(val_loss)
             self.scheduler.step(val_loss)
@@ -80,8 +81,8 @@ class Trainer:
                 val_loss, 
                 epoch+1, 
                 epochs, 
-                epoch_time, 
-                **self.logger_kwargs
+                epoch_time 
+                #**self.logger_kwargs
             )
 
         total_time = time.time() - total_start_time
@@ -100,7 +101,7 @@ class Trainer:
         epochs, 
         epoch_time, 
         show=True, 
-        update_step=20
+        update_step=1
     ):
         if show:
             if epoch % update_step == 0 or epoch == 1:
@@ -111,19 +112,20 @@ class Trainer:
                 msg = f"{msg} | Time/epoch: {round(epoch_time, 5)} seconds"
 
                 logging.info(msg)
+                
     
     def _train(self, loader):
         self.model.train()
         loss_ = []
         for features, ground_truth in loader:
             # move to device
-            features, labels = self._to_device(features, ground_truth, self.device)
+            features, ground_truth = self._to_device(features, ground_truth, self.device)
             
             # forward pass
             out = self.model(features)
             
             # loss
-            loss = (self._compute_loss(out, ground_truth))
+            loss = (self._compute_loss(out.float(), ground_truth.float()))
             loss_.append(loss.item())
             
             # remove gradient from previous passes
@@ -135,7 +137,7 @@ class Trainer:
             # parameters update
             self.optimizer.step()
             
-        return loss_.mean()
+        return mean(loss_)
     
     def _to_device(self, features, ground_truth, device):
         return features.to(device, dtype = torch.float), ground_truth.to(device, dtype = torch.float)
@@ -153,9 +155,9 @@ class Trainer:
                 )
                 
                 out = self.model(features)
-                loss = self._compute_loss(out, ground_truth)
+                loss = self._compute_loss(out.float(), ground_truth.float())
                 loss_.append(loss.item())
-        return loss_.mean()
+        return mean(loss_)
     
     def _compute_loss(self, real, target):
         try:

@@ -10,11 +10,11 @@ class AttnDecoder(nn.Module):
         self.key_proj = nn.LazyLinear(hidden_size)
         self.activation = nn.ReLU()
         self.w_v = nn.LazyLinear(1)
-        self.linear1 = nn.LazyLinear(100)
-        self.linear2 = nn.LazyLinear(500)
-        self.linear3 = nn.LazyLinear(250)
-        self.linear4 = nn.LazyLinear(100)
-        self.linear5 = nn.LazyLinear(50)
+        self.linear1 = nn.LazyLinear(8)
+        self.linear2 = nn.LazyLinear(8)
+        self.linear3 = nn.LazyLinear(2)
+        self.linear4 = nn.LazyLinear(2)
+        self.linear5 = nn.LazyLinear(2)
         self.linear6 = nn.LazyLinear(n_out)
         self.dropout = nn.Dropout(0.2)
         
@@ -24,6 +24,7 @@ class AttnDecoder(nn.Module):
         h = self.dec(context, hidden_prev)
         
         x = self.linear1(h)
+        '''
         x = self.activation(x)
         x = self.dropout(x)
         x = self.linear2(h)
@@ -38,6 +39,7 @@ class AttnDecoder(nn.Module):
         x = self.linear5(x)
         x = self.activation(x)
         x = self.dropout(x)
+        '''
         x = self.linear6(x)
         return x, h
 
@@ -48,9 +50,9 @@ class TimeSeriesForecastingModel(nn.Module):
     def __init__(self, len_forecast, n_out):
         super(TimeSeriesForecastingModel, self).__init__()
         self.activation = nn.ReLU()
-        self.conv = nn.LazyConv1d(1024, 3, 1, padding = 1)
-        self.enc = nn.GRU(batch_first = True, input_size = 1024, hidden_size = 512, num_layers = 1)
-        self.attndec = AttnDecoder(512, 512, n_out)
+        self.conv = nn.LazyConv1d(32, 3, 1, padding = 1)
+        self.enc = nn.GRU(batch_first = True, input_size = 156, hidden_size = 8, num_layers = 1)
+        self.attndec = AttnDecoder(8, 8, n_out)
         self.dropout = nn.Dropout(0.2)
         self.flatten = nn.Flatten(1)
         self.norm = nn.LazyBatchNorm1d()
@@ -59,10 +61,12 @@ class TimeSeriesForecastingModel(nn.Module):
         
     
     def forward(self, input):
+        '''
         x = self.conv(input.float())
         x = self.activation(x)
         x = self.dropout(x)
-        x, h = self.enc(x.transpose(1,2))
+        '''
+        x, h = self.enc(input.float().transpose(1,2))
         
         h_dec = [None] * self.len_forecast
         out = [None] * self.len_forecast
