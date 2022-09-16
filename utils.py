@@ -1,9 +1,5 @@
 import numpy as np
 import pandas as pd
-import torch
-from easydict import EasyDict
-
-
 def split_seq(df, time_window, len_forecast, col_out):
     seq = []
    
@@ -66,7 +62,7 @@ def col_out_to_index(df, col_out):
         col_out_in[col] = (in_x, i)
 
     return col_out_in
-
+'''
 def get_config_from_json(json_file):
     """
     Get the config from a json file
@@ -84,3 +80,4 @@ def get_config_from_json(json_file):
         except ValueError:
             print("INVALID JSON file format.. Please provide a good json file")
             exit(-1)
+'''
