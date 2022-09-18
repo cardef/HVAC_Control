@@ -1,5 +1,5 @@
 import torch
-from torch.utils.data import Dataset, DataLoader
+from torch.utils.data import Dataset
 import numpy as np
 
 class Dataset(Dataset):
@@ -17,5 +17,5 @@ class Dataset(Dataset):
             return self.tensor.size(0)-self.time_window-self.len_forecast+1
     
     def __getitem__(self, idx):
-            seq_x, seq_y = self.tesnor[idx:idx+self.time_window], self.tensor[idx+self.time_window: idx+self.time_window+self.len_forecast, self.col_out]
+            seq_x, seq_y = self.tensor[idx:idx+self.time_window], self.tensor[idx+self.time_window: idx+self.time_window+self.len_forecast, self.col_out]
             return seq_x, seq_y

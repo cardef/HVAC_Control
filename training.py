@@ -3,6 +3,7 @@ import logging
 import warnings
 import torch
 from statistics import mean
+import tqdm
 
 class Trainer:
     """Trainer
@@ -62,8 +63,10 @@ class Trainer:
         total_start_time = time.time()
 
         # ---- train process ----
-        for epoch in range(epochs):
+        pbar = tqdm.trange(epochs, unit="epoch")
+        for epoch in pbar:
             # track epoch time
+            pbar.set_description(f"Epoch: {epoch}")
             epoch_start_time = time.time()
 
             # train
@@ -83,7 +86,7 @@ class Trainer:
                 epoch_time 
                 #**self.logger_kwargs
             )
-
+            pbar.set_postfix(train_loss = tr_loss, val_loss = val_loss)
         total_time = time.time() - total_start_time
 
         # final message
@@ -116,25 +119,28 @@ class Trainer:
     def _train(self, loader):
         self.model.train()
         loss_ = []
-        for features, ground_truth in loader:
-            # move to device
-            features, ground_truth = self._to_device(features, ground_truth, self.device)
-            
-            # forward pass
-            out = self.model(features)
-            
-            # loss
-            loss = (self._compute_loss(out.float(), ground_truth.float()))
-            loss_.append(loss.item())
-            
-            # remove gradient from previous passes
-            self.optimizer.zero_grad()
-            
-            # backprop
-            loss.backward()
-            
-            # parameters update
-            self.optimizer.step()
+        with tqdm(loader, unit = 'batch', desc = 'Train loader') as tepoch:
+            for features, ground_truth in tepoch:
+                # move to device
+                features, ground_truth = self._to_device(features, ground_truth, self.device)
+                
+                # forward pass
+                out = self.model(features)
+                
+                # loss
+                loss = (self._compute_loss(out.float(), ground_truth.float()))
+                loss_.append(loss.item())
+                
+                # remove gradient from previous passes
+                self.optimizer.zero_grad()
+                
+                # backprop
+                loss.backward()
+                
+                # parameters update
+                self.optimizer.step()
+                
+                tepoch.set_postfix(loss = loss.item())
             
         return mean(loss_)
     
@@ -145,17 +151,19 @@ class Trainer:
         self.model.eval()
         loss_ = []
         with torch.no_grad():
-            for features, ground_truth in loader:
-                # move to device
-                features, ground_truth = self._to_device(
-                    features, 
-                    ground_truth, 
-                    self.device
-                )
-                
-                out = self.model(features)
-                loss = self._compute_loss(out.float(), ground_truth.float())
-                loss_.append(loss.item())
+            with tqdm(loader, unit_size = 'batch', desc = 'Validation loader') as tepoch:
+                for features, ground_truth in tepoch:
+                    # move to device
+                    features, ground_truth = self._to_device(
+                        features, 
+                        ground_truth, 
+                        self.device
+                    )
+                    
+                    out = self.model(features)
+                    loss = self._compute_loss(out.float(), ground_truth.float())
+                    loss_.append(loss.item())
+                    tepoch.set_postfix(loss = loss.item())
         return mean(loss_)
     
     def _compute_loss(self, real, target):

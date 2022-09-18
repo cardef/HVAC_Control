@@ -1,19 +1,8 @@
 import numpy as np
 import pandas as pd
-def split_seq(df, time_window, len_forecast, col_out):
-    seq = []
-   
-    df = torch.tensor(df.values.astype(float))
-    for i in range(len(df)):
-        
-        end_ix = i + time_window
-        
-        if end_ix+len_forecast > len(df):
-            break
-        seq_x, seq_y = df[i:end_ix], df[end_ix:end_ix+len_forecast, col_out]
-        seq.append((seq_x.transpose(0,1), seq_y))
-    return seq
+from pathlib import Path
 
+MAIN_DIR = Path(__file__).parent
 
 def merge(path, csv_list):
     df = pd.read_csv(path + '\\'+ csv_list[0])
@@ -21,7 +10,7 @@ def merge(path, csv_list):
     df = df.drop_duplicates(subset = ['date'], keep='first')
     df['date'] = pd.Series(pd.date_range(min(df['date']), max(df['date']), freq = '15min'))
     for dataframe_name in csv_list[1:]:
-        dataframe = pd.read_csv(path + '\\' + dataframe_name)
+        dataframe = pd.read_csv(MAIN_DIR/dataframe_name)
         dataframe['date']  = pd.to_datetime(dataframe['date'])
         dataframe = dataframe.drop_duplicates(subset = ['date'], keep = 'first')
         df = pd.merge_asof(df, dataframe, on = 'date', tolerance = pd.Timedelta('10min'))

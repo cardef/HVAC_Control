@@ -1,28 +1,20 @@
 
 import training
 import torch
-from model import model
+from model.forecaster_energy import ForecasterEnergy
 from torch import nn
 from torch.optim import Adam
 from torch.optim.lr_scheduler import ReduceLROnPlateau
 from torch.utils.data import Dataset, DataLoader
+from dataset.dataloader import Dataset
+from pathlib import Path
 
+main_dir = Path(__file__).parent
 
-class DatasetSeq(Dataset):
-    
-    def __init__(self, dataset):
-        self.dataset = dataset
-        
-    def __len__(self):
-        return len(self.dataset)
-    
-    def __getitem__(self, idx):
-        return self.dataset[idx]
+energy_train_loader = torch.load(main_dir/'dataset'/'energy'/'train_loader.pt')
+energy_valid_loader = torch.load(main_dir/'dataset'/'energy'/'valid_loader.pt')
 
-energy_train_loader = torch.load(r'C:\Users\cdellefemine\Documents\GitHub\HVAC-Control\dataset\energy\train_loader.pt')
-energy_valid_loader = torch.load(r'C:\Users\cdellefemine\Documents\GitHub\HVAC-Control\dataset\energy\valid_loader.pt')
-
-forecaster_energy = model.TimeSeriesForecastingModel(4,1).to(dtype = torch.float)
+forecaster_energy = ForecasterEnergy(4,1).to(dtype = torch.float)
 
 loss_fn = nn.MSELoss()
 optimizer = Adam(forecaster_energy.parameters())
