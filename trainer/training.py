@@ -120,7 +120,7 @@ class Trainer:
         self.model.train()
         loss_ = []
         with tqdm(loader, unit = 'batch', desc = 'Train loader') as tepoch:
-            for features, ground_truth in tepoch:
+            for features, ground_truth,_ ,_ in tepoch:
                 # move to device
                 features, ground_truth = self._to_device(features, ground_truth, self.device)
                 
@@ -152,7 +152,7 @@ class Trainer:
         loss_ = []
         with torch.no_grad():
             with tqdm(loader, unit_size = 'batch', desc = 'Validation loader') as tepoch:
-                for features, ground_truth in tepoch:
+                for features, ground_truth, _, _ in tepoch:
                     # move to device
                     features, ground_truth = self._to_device(
                         features, 

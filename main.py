@@ -1,12 +1,12 @@
 
-import training
+import trainer.training as training
 import torch
 from model.forecaster_energy import ForecasterEnergy
 from torch import nn
 from torch.optim import Adam
 from torch.optim.lr_scheduler import ReduceLROnPlateau
 from torch.utils.data import Dataset, DataLoader
-from dataset.dataloader import Dataset
+from data_loader.dataset import Dataset
 from pathlib import Path
 
 main_dir = Path(__file__).parent

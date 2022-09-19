@@ -1,5 +1,5 @@
 from utils import merge, split
-from dataset.preprocessor import Preprocessor
+from data_loader.preprocessor import Preprocessor
 from sklearn.impute import KNNImputer, SimpleImputer
 from pickle import dump
 from pathlib import Path

@@ -35,3 +35,6 @@ def plot(df, res, col_out):
        plot_df = plot_df.merge(df['timestamp', col_out], on = 'timestamp', how = 'left')
        df_melted = plot_df.melt(id_vars = ['timestamp'], value_vars = ['true', 'pred'])
        sns.lineplot(data = df_melted, x = 'timestamp', y = 'value', hue = 'variable')
+       
+       
+       

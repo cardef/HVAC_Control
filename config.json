@@ -1,0 +1,28 @@
+{
+  "PARAMETER": {
+
+    "DATA": {
+
+      "col_temp_in" : ["cerc_templogger_1", "cerc_templogger_10", "cerc_templogger_11",
+                      "cerc_templogger_12", "cerc_templogger_13", "cerc_templogger_14",
+                      "cerc_templogger_15", "cerc_templogger_16", "cerc_templogger_2",
+                      "cerc_templogger_3", "cerc_templogger_4", "cerc_templogger_5",
+                      "cerc_templogger_6", "cerc_templogger_7", "cerc_templogger_8", "cerc_templogger_9"],
+      
+      "col_temp_ext" : ["zone_016_temp", "zone_017_temp", "zone_018_temp",
+                      "zone_019_temp", "zone_021_temp", "zone_022_temp", "zone_023_temp",
+                      "zone_024_temp", "zone_025_temp", "zone_026_temp", "zone_027_temp",
+                      "zone_028_temp", "zone_030_temp", "zone_032_temp", "zone_033_temp",
+                      "zone_035_temp", "zone_036_temp", "zone_037_temp", "zone_038_temp",
+                      "zone_039_temp", "zone_040_temp", "zone_041_temp", "zone_042_temp",
+                      "zone_043_temp", "zone_044_temp", "zone_045_temp", "zone_046_temp",
+                      "zone_047_temp", "zone_048_temp", "zone_049_temp", "zone_051_temp",
+                      "zone_052_temp", "zone_053_temp", "zone_054_temp", "zone_055_temp",
+                      "zone_056_temp", "zone_057_temp", "zone_058_temp", "zone_059_temp",
+                      "zone_061_temp", "zone_062_temp", "zone_063_temp", "zone_064_temp",
+                      "zone_065_temp", "zone_066_temp", "zone_067_temp", "zone_068_temp",
+                      "zone_069_temp", "zone_070_temp", "zone_071_temp", "zone_072_temp"]
+
+    }
+  }
+}  
