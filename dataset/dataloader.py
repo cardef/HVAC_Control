@@ -9,13 +9,12 @@ class Dataset(Dataset):
         self.time_window = time_window
         self.len_forecast = len_forecast
         self.col_out = col_out
-        
 
         self.tensor = torch.tensor(self.dataset.values).to(dtype = torch.float)
 
     def __len__(self):
-            return self.tensor.size(0)-self.time_window-self.len_forecast+1
+            return (self.tensor.size(0)-self.time_window-self.len_forecast)%self.len_forecast+1
     
     def __getitem__(self, idx):
-            seq_x, seq_y = self.tensor[idx:idx+self.time_window], self.tensor[idx+self.time_window: idx+self.time_window+self.len_forecast, self.col_out]
+            seq_x, seq_y = self.tensor[self.len_forecast*idx:self.len_forecast*idx+self.time_window], self.tensor[self.len_forecast*idx+self.time_window: self.len_forecast*idx+self.time_window+self.len_forecast, self.col_out]
             return seq_x, seq_y
