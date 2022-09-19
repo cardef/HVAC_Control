@@ -29,9 +29,9 @@ app.layout = html.Div(children = [
     Input("ticker", "value"))
 def display_time_series(ticker):
     df = pd.read_csv(MAIN_DIR/'data'/'results'/'temperature'/'results.csv')
-    df_= df[ticker]
+    df_melted= df[ticker].melt(id_vars = ['date'], value_vars = ['true', 'pred'])
     # replace with your own data source
-    fig = px.line(df, x=df.index, y=ticker)
+    fig = px.line(df_melted, x=df_melted.index, y='value', color='variable')
     return fig
 
 

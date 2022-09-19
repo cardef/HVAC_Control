@@ -21,8 +21,10 @@
                       "zone_056_temp", "zone_057_temp", "zone_058_temp", "zone_059_temp",
                       "zone_061_temp", "zone_062_temp", "zone_063_temp", "zone_064_temp",
                       "zone_065_temp", "zone_066_temp", "zone_067_temp", "zone_068_temp",
-                      "zone_069_temp", "zone_070_temp", "zone_071_temp", "zone_072_temp"]
-
+                      "zone_069_temp", "zone_070_temp", "zone_071_temp", "zone_072_temp"],
+      
+        "time_window" : 96,
+        "len_forecast":4
     }
   }
 }  
