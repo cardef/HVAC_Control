@@ -18,11 +18,10 @@ with open('config.json') as f:
     col_out = config['PARAMETER']['DATA']['col_temp_in'] + config['PARAMETER']['DATA']['col_temp_ext']
     len_forecast = config['PARAMETER']['DATA']['len_forecast']
 
-
 energy_train_loader = torch.load(main_dir/'data'/'cleaned'/'energy'/'train_loader.pt')
 energy_valid_loader = torch.load(main_dir/'data'/'cleaned'/'energy'/'valid_loader.pt')
 
-forecaster_energy = ForecasterEnergy(len_forecast,1).to(dtype = torch.float)
+forecaster_energy = ForecasterEnergy(len_forecast).to(dtype = torch.float)
 
 loss_fn = nn.MSELoss()
 optimizer = Adam(forecaster_energy.parameters())

@@ -4,7 +4,6 @@ import warnings
 import torch
 from statistics import mean
 import tqdm
-
 class Trainer:
     """Trainer
     
@@ -119,7 +118,7 @@ class Trainer:
     def _train(self, loader):
         self.model.train()
         loss_ = []
-        with tqdm(loader, unit = 'batch', desc = 'Train loader') as tepoch:
+        with tqdm.tqdm(loader, unit = 'batch', desc = 'Train loader') as tepoch:
             for features, ground_truth,_ ,_ in tepoch:
                 # move to device
                 features, ground_truth = self._to_device(features, ground_truth, self.device)
@@ -151,7 +150,7 @@ class Trainer:
         self.model.eval()
         loss_ = []
         with torch.no_grad():
-            with tqdm(loader, unit_size = 'batch', desc = 'Validation loader') as tepoch:
+            with tqdm.tqdm(loader, unit_size = 'batch', desc = 'Validation loader') as tepoch:
                 for features, ground_truth, _, _ in tepoch:
                     # move to device
                     features, ground_truth = self._to_device(

@@ -1,16 +1,16 @@
 from torch import nn
 import torch
-from model.layers import attndecoder, conv1d, encoder, fcc
+from .layers import attndecoder, conv1d, encoder, fcc
 
 class ForecasterEnergy(nn.Module):
     
     def __init__(self, len_forecast):
         super(ForecasterEnergy, self).__init__()
-        self.conv1d = conv1d([(512, 3, 1, 1)])
+        self.conv1d = conv1d.Conv1d([(512, 3, 1, 1)])
         self.dropout = nn.Dropout(0.2)
-        self.encoder = encoder(512, 512, 1)
-        self.decoder = attndecoder(512, 256)
-        self.fcc = fcc([500, 200, 100, 50, 10, 1])
+        self.encoder = encoder.Encoder(512, 512, 1)
+        self.decoder = attndecoder.AttnDecoder(512, 256)
+        self.fcc = fcc.FCC([500, 200, 100, 50, 10, 1], 0.2)
         self.len_forecast = len_forecast
     def forward(self, x):
         x = self.conv1d(x)
