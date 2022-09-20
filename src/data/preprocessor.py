@@ -30,6 +30,7 @@ class Preprocessor():
         return self
 
     def transform(self, df):
+        df = df
         df_cleaned = df.drop(self.col_const + self.col_to_ignore, axis = 1)
         
         for i, col in enumerate(list(df_cleaned.columns)):
@@ -38,5 +39,6 @@ class Preprocessor():
 
         df_cleaned = pd.DataFrame(self.imputer.transform(df_cleaned), columns = df_cleaned.columns)
         df_cleaned = (df_cleaned-self.mean)/self.std
-        df_cleaned[self.col_to_ignore] = df[self.col_to_ignore]
+        
+        df_cleaned[self.col_to_ignore] = df[self.col_to_ignore].copy()
         return df_cleaned

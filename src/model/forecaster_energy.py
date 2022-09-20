@@ -9,7 +9,7 @@ class ForecasterEnergy(nn.Module):
         self.conv1d = conv1d.Conv1d([(512, 3, 1, 1)])
         self.dropout = nn.Dropout(0.2)
         self.encoder = encoder.Encoder(512, 512, 1)
-        self.decoder = attndecoder.AttnDecoder(512, 256)
+        self.decoder = attndecoder.AttnDecoder(512, 512)
         self.fcc = fcc.FCC([500, 200, 100, 50, 10, 1], 0.2)
         self.len_forecast = len_forecast
     def forward(self, x):
@@ -17,10 +17,10 @@ class ForecasterEnergy(nn.Module):
         x = self.dropout(x)
         x, h = self.encoder(x.transpose(1,2))
 
-        h_dec = [None] * self.len_forecast
         out = [None] * self.len_forecast
-        out[0], h_dec[0] = self.attndec(x[:,-1,:].squeeze(1), x)
+        out[0] = self.decoder(x[:,-1,:].squeeze(1), x)
         for i in range(1, self.len_forecast):
-            out[i], h_dec[i] = self.attndec(h_dec[i-1], x)
+            out[i] = self.decoder(out[i-1], x)
         out = torch.stack(out, dim = 1)
-        return out.squeeze()
+        out = self.fcc(out)
+        return out

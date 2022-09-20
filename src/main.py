@@ -28,7 +28,7 @@ optimizer = Adam(forecaster_energy.parameters())
 scheduler = ReduceLROnPlateau(optimizer, patience = 7)
 trainer = training.Trainer(forecaster_energy, loss_fn, optimizer, scheduler, logger_kwargs = None)
 
-trainer.fit(energy_train_loader, energy_valid_loader, 10)
+trainer.fit(energy_train_loader, energy_valid_loader, 2)
 
 
 temp_train_loader = torch.load(main_dir/'data'/'cleaned'/'temp'/'train_loader.pt')
@@ -41,7 +41,7 @@ optimizer = Adam(forecaster_temp.parameters())
 scheduler = ReduceLROnPlateau(optimizer, patience = 7)
 trainer = training.Trainer(forecaster_temp, loss_fn, optimizer, scheduler, logger_kwargs = None)
 
-trainer.fit(temp_train_loader, temp_valid_loader, 10)
+trainer.fit(temp_train_loader, temp_valid_loader, 2)
 
 torch.save(forecaster_energy.state_dict(),main_dir/'results'/'models'/'forecaster_energy.pt')
 torch.save(forecaster_temp.state_dict(),main_dir/'results'/'models'/'forecaster_temp.pt')

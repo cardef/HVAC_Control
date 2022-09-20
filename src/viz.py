@@ -3,9 +3,11 @@ import plotly.express as px
 import json
 import pandas as pd
 from pathlib import Path
-MAIN_DIR = Path(__file__).parent
-config = json.load("config.json")
-col_out = config['PARAMETER']['DATA']['col_temp_in'] + config['PARAMETER']['DATA']['col_temp_ext'] 
+MAIN_DIR = Path(__file__).parent.parent
+
+with open("config.json") as f:
+    config = json.load(f)
+    col_out = config['PARAMETER']['DATA']['col_temp_in'] + config['PARAMETER']['DATA']['col_temp_ext'] 
 app = Dash(__name__)
 
 
@@ -28,7 +30,7 @@ app.layout = html.Div(children = [
     Output("time-series-chart", "figure"), 
     Input("ticker", "value"))
 def display_time_series(ticker):
-    df = pd.read_csv(MAIN_DIR/'data'/'results'/'temperature'/'results.csv')
+    df = pd.read_csv(MAIN_DIR/'results'/'outputs'/'temp_prediction.csv')
     df_melted= df[ticker].melt(id_vars = ['date'], value_vars = ['true', 'pred'])
     # replace with your own data source
     fig = px.line(df_melted, x=df_melted.index, y='value', color='variable')

@@ -1,6 +1,6 @@
 from utils import MAIN_DIR, merge, split
 from data.preprocessor import Preprocessor
-from data.dataset import Dataset
+from data.dataset import Dataset, collate_fn
 from sklearn.impute import KNNImputer, SimpleImputer
 from pickle import dump
 from pathlib import Path
@@ -43,9 +43,9 @@ energy_valid_set.to_csv(main_dir/'data'/'cleaned'/'energy'/'valid_set_imp.csv', 
 energy_test_set.to_csv(main_dir/'data'/'cleaned'/'energy'/'test_set_imp.csv', index = False)
 dump(energy_preprocessor, open(main_dir/'data'/'cleaned'/'preprocessor'/'energy_preprocessor.pkl', 'wb'))
 
-energy_train_loader = DataLoader(Dataset(energy_train_set, time_window, len_forecast, ['hvac']), batch_size = 64)
-energy_valid_loader = DataLoader(Dataset(energy_valid_set, time_window, len_forecast, ['hvac']), batch_size = 64)
-energy_test_loader = DataLoader(Dataset(energy_test_set, time_window, len_forecast, ['hvac']), batch_size = 64)
+energy_train_loader = DataLoader(Dataset(energy_train_set, time_window, len_forecast, ['hvac']), batch_size = 64, collate_fn = collate_fn)
+energy_valid_loader = DataLoader(Dataset(energy_valid_set, time_window, len_forecast, ['hvac']), batch_size = 64, collate_fn = collate_fn)
+energy_test_loader = DataLoader(Dataset(energy_test_set, time_window, len_forecast, ['hvac']), batch_size = 64, collate_fn = collate_fn)
 
 torch.save(energy_train_loader, main_dir/'data'/'cleaned'/'energy'/'train_loader.pt')
 torch.save(energy_valid_loader, main_dir/'data'/'cleaned'/'energy'/'valid_loader.pt')
@@ -69,9 +69,9 @@ temp_valid_set.to_csv(main_dir/'data'/'cleaned'/'temp'/'valid_set_imp.csv', inde
 temp_test_set.to_csv(main_dir/'data'/'cleaned'/'temp'/'test_set_imp.csv', index = False)
 dump(temp_preprocessor, open(main_dir/'data'/'cleaned'/'preprocessor'/'temp_preprocessor.pkl', 'wb'))
 
-temp_train_loader = DataLoader(Dataset(temp_train_set, time_window, len_forecast, col_temp_in+col_temp_ext), batch_size = 64)
-temp_valid_loader = DataLoader(Dataset(temp_valid_set, time_window, len_forecast, col_temp_in+col_temp_ext), batch_size = 64)
-temp_test_loader = DataLoader(Dataset(temp_test_set, time_window, len_forecast, col_temp_in+col_temp_ext), batch_size = 64)
+temp_train_loader = DataLoader(Dataset(temp_train_set, time_window, len_forecast, col_temp_in+col_temp_ext), batch_size = 64, collate_fn = collate_fn)
+temp_valid_loader = DataLoader(Dataset(temp_valid_set, time_window, len_forecast, col_temp_in+col_temp_ext), batch_size = 64, collate_fn = collate_fn)
+temp_test_loader = DataLoader(Dataset(temp_test_set, time_window, len_forecast, col_temp_in+col_temp_ext), batch_size = 64, collate_fn = collate_fn)
 torch.save(temp_train_loader, main_dir/'data'/'cleaned'/'temp'/'train_loader.pt')
 torch.save(temp_valid_loader, main_dir/'data'/'cleaned'/'temp'/'valid_loader.pt')
 torch.save(temp_test_loader, main_dir/'data'/'cleaned'/'temp'/'test_loader.pt')

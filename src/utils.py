@@ -39,8 +39,8 @@ def imputation(df, imputer, fit = False):
 
 def split(df, train_size = 0.8):
     train_indices = np.ceil(len(df)*train_size).astype(int)
-    train_set = df[:train_indices]
-    test_set = df[train_indices:]
+    train_set = df[:train_indices].reset_index()
+    test_set = df[train_indices:].reset_index()
 
     return train_set, test_set
 

@@ -22,26 +22,29 @@ class Evaluator():
         self.loss_ = []
         self.model.eval()
         with torch.no_grad():
-            with tqdm(self.test_loader, unit_size = 'batch', desc = 'Evaluation') as pbar:
-                for X, Y, timestamp_y in pbar:
-                    pred = self.model(X.to(self.device)).unsqueeze()
+            with tqdm.tqdm(self.test_loader, unit = 'batch', desc = 'Evaluation') as pbar:
+                for X, Y,_ ,timestamp_y in pbar:
+                    pred = self.model(X.to(self.device))
                     loss = self.criterion(pred, Y).item()
                     self.loss_.append(loss)
                     pbar.set_postfix(loss = loss)
-                    self.prediction.append(pred.view(-1, pred.size(2)).detach.cpu().numpy())
-                    self.ground_truth.append(Y.view(-1, Y.size(2)).detach.cpu().numpy())
-                    self.timestamp.append(timestamp_y)
-        self.prediction = np.cat(self.prediction, axis = 0)
-        self.ground_truth = np.cat(self.ground_truth, axis = 0)
-        res_matrix = np.zeros(self.ground_truth.size(0), self.ground_truth.size(0)*2)
-        for i in range(self.prediction.size(1)):
+                    self.prediction.append(pred.view(-1, pred.size(2)).detach().cpu().numpy())
+                    self.ground_truth.append(Y.view(-1, Y.size(2)).detach().cpu().numpy())
+                    print(timestamp_y)
+                    self.timestamp.extend(timestamp_y)
+        self.prediction = np.concatenate(self.prediction, axis = 0)
+        self.ground_truth = np.concatenate(self.ground_truth, axis = 0)
+        res_matrix = np.zeros((self.ground_truth.shape[0], self.ground_truth.shape[1]*2))
+        for i in range(self.prediction.shape[1]):
             res_matrix[:,i*2] = self.ground_truth[:,i]
             res_matrix[:,i*2 + 1] = self.prediction[:,i]
-        print("Loss:", self.loss_.mean())
+        print("Loss:", mean(self.loss_))
         columns = product(self.col_out, ['true', 'pred'])
-        res_df = pd.DataFrame(self.prediction, columns=columns)    
-        res_df['date'] = self.timestamp
-        res_df.set_index('date')
-        res_df.columns = pd.MultiIndex.from_tuples(res_df.columns, names=['Variable','Type'])
+        res_df = pd.DataFrame(res_matrix, columns=columns)
+        print(self.timestamp)    
         
-        return res_df, self.loss_.mean()        
+        print(res_df.columns)
+        res_df.columns = pd.MultiIndex.from_tuples(res_df.columns, names=['Variable','Type'])
+        res_df['date'] = pd.to_datetime(self.timestamp)
+        res_df.set_index('date')
+        return res_df, mean(self.loss_)        
