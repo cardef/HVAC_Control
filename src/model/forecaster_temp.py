@@ -1,6 +1,6 @@
 from torch import nn
 import torch
-from layers import attndecoder, conv1d, encoder, fcc
+from model.layers import attndecoder, conv1d, encoder, fcc
 
 class ForecasterTemp(nn.Module):
     

@@ -1,5 +1,5 @@
 
-from src.utils import MAIN_DIR
+from utils import MAIN_DIR
 import trainer.training as training
 import torch
 from model.forecaster_energy import ForecasterEnergy
@@ -12,10 +12,11 @@ from data.dataset import Dataset
 from pathlib import Path
 import json
 
-main_dir = Path(__file__).parent
-config = json.load("config.json")
-col_out = config['PARAMETER']['DATA']['col_temp_in'] + config['PARAMETER']['DATA']['col_temp_ext']
-len_forecast = config['PARAMETER']['DATA']['len_forecast']
+main_dir = Path(__file__).parent.parent
+with open('config.json') as f:
+    config = json.load(f)
+    col_out = config['PARAMETER']['DATA']['col_temp_in'] + config['PARAMETER']['DATA']['col_temp_ext']
+    len_forecast = config['PARAMETER']['DATA']['len_forecast']
 
 
 energy_train_loader = torch.load(main_dir/'data'/'cleaned'/'energy'/'train_loader.pt')
