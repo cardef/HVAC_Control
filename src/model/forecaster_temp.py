@@ -6,11 +6,11 @@ class ForecasterTemp(nn.Module):
     
     def __init__(self, len_forecast, col_out):
         super(ForecasterTemp, self).__init__()
-        self.conv1d = conv1d.Conv1d([(512, 3, 1, 1)])
-        self.dropout = nn.Dropout(0.2)
+        self.conv1d = conv1d.Conv1d([(1024, 3, 1, 1), (512, 5, 1, 1)])
+        self.dropout = nn.Dropout(0.3)
         self.encoder = encoder.Encoder(512, 512, 1)
         self.decoder = attndecoder.AttnDecoder(512, 512)
-        self.fcc = fcc.FCC([500, 200, 50], 0.2)
+        self.fcc = fcc.FCC([1000, 500, 250, 100], 0.3)
         self.output = nn.LazyLinear(col_out)
         self.len_forecast = len_forecast
     def forward(self, x):

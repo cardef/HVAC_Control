@@ -25,10 +25,10 @@ forecaster_energy = ForecasterEnergy(len_forecast).to(dtype = torch.float)
 
 loss_fn = nn.MSELoss()
 optimizer = Adam(forecaster_energy.parameters(), lr=0.0003)
-scheduler = ReduceLROnPlateau(optimizer, patience = 7)
-trainer = training.Trainer(forecaster_energy, loss_fn, optimizer, scheduler, logger_kwargs = None)
+scheduler = ReduceLROnPlateau(optimizer, patience = 5, factor=0.5, verbose = True)
+#trainer = training.Trainer(forecaster_energy, loss_fn, optimizer, scheduler, logger_kwargs = None)
 
-trainer.fit(energy_train_loader, energy_valid_loader, 2)
+#trainer.fit(energy_train_loader, energy_valid_loader, 50)
 
 
 temp_train_loader = torch.load(main_dir/'data'/'cleaned'/'temp'/'train_loader.pt')
@@ -38,10 +38,10 @@ forecaster_temp = ForecasterTemp(len_forecast,len(col_out)).to(dtype = torch.flo
 
 loss_fn = nn.MSELoss()
 optimizer = Adam(forecaster_temp.parameters(), lr = 3e-4)
-scheduler = ReduceLROnPlateau(optimizer, patience = 7)
+scheduler = ReduceLROnPlateau(optimizer, patience = 5, factor=0.5, verbose = True)
 trainer = training.Trainer(forecaster_temp, loss_fn, optimizer, scheduler, logger_kwargs = None)
 
-trainer.fit(temp_train_loader, temp_valid_loader, 2)
+trainer.fit(temp_train_loader, temp_valid_loader, 10)
 
-torch.save(forecaster_energy.state_dict(),main_dir/'results'/'models'/'forecaster_energy.pt')
+#torch.save(forecaster_energy.state_dict(),main_dir/'results'/'models'/'forecaster_energy.pt')
 torch.save(forecaster_temp.state_dict(),main_dir/'results'/'models'/'forecaster_temp.pt')

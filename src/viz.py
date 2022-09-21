@@ -43,4 +43,4 @@ def display_time_series(ticker):
     return fig
 
 
-app.run_server(debug=True)
+app.run_server(debug=True, port = 8051)
