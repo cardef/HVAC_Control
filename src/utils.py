@@ -1,6 +1,7 @@
 import numpy as np
 import pandas as pd
 from pathlib import Path
+import tqdm
 
 MAIN_DIR = Path(__file__).parent.parent
 
@@ -9,7 +10,7 @@ def merge(path, csv_list):
     df['date'] = pd.to_datetime(df['date'])
     df = df.drop_duplicates(subset = ['date'], keep='first')
     df['date'] = pd.Series(pd.date_range(min(df['date']), max(df['date']), freq = '15min'))
-    for dataframe_name in csv_list[1:]:
+    for dataframe_name in tqdm.tqdm(csv_list[1:], desc = 'Merge', unit = 'file'):
         dataframe = pd.read_csv(path/dataframe_name)
         dataframe['date']  = pd.to_datetime(dataframe['date'])
         dataframe = dataframe.drop_duplicates(subset = ['date'], keep = 'first')
