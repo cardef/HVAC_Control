@@ -25,12 +25,11 @@ class Evaluator():
             with tqdm.tqdm(self.test_loader, unit = 'batch', desc = 'Evaluation') as pbar:
                 for X, Y,_ ,timestamp_y in pbar:
                     pred = self.model(X.to(self.device))
-                    loss = self.criterion(pred, Y).item()
+                    loss = self.criterion(pred, Y.to(self.device)).item()
                     self.loss_.append(loss)
                     pbar.set_postfix(loss = loss)
                     self.prediction.append(pred.view(-1, pred.size(2)).detach().cpu().numpy())
                     self.ground_truth.append(Y.view(-1, Y.size(2)).detach().cpu().numpy())
-                    print(timestamp_y)
                     self.timestamp.extend(timestamp_y)
         self.prediction = np.concatenate(self.prediction, axis = 0)
         self.ground_truth = np.concatenate(self.ground_truth, axis = 0)

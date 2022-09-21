@@ -24,7 +24,7 @@ energy_valid_loader = torch.load(main_dir/'data'/'cleaned'/'energy'/'valid_loade
 forecaster_energy = ForecasterEnergy(len_forecast).to(dtype = torch.float)
 
 loss_fn = nn.MSELoss()
-optimizer = Adam(forecaster_energy.parameters())
+optimizer = Adam(forecaster_energy.parameters(), lr=0.0003)
 scheduler = ReduceLROnPlateau(optimizer, patience = 7)
 trainer = training.Trainer(forecaster_energy, loss_fn, optimizer, scheduler, logger_kwargs = None)
 
@@ -37,7 +37,7 @@ temp_valid_loader = torch.load(main_dir/'data'/'cleaned'/'temp'/'valid_loader.pt
 forecaster_temp = ForecasterTemp(len_forecast,len(col_out)).to(dtype = torch.float)
 
 loss_fn = nn.MSELoss()
-optimizer = Adam(forecaster_temp.parameters())
+optimizer = Adam(forecaster_temp.parameters(), lr = 3e-4)
 scheduler = ReduceLROnPlateau(optimizer, patience = 7)
 trainer = training.Trainer(forecaster_temp, loss_fn, optimizer, scheduler, logger_kwargs = None)
 

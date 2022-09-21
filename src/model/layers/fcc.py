@@ -8,8 +8,8 @@ class FCC(nn.Module):
         self.activation = nn.ReLU()
         self.dropout = nn.Dropout(p_dropout)
     def forward(self, x):
-        for layer in self.fcc:
+        for layer in self.fcc:       
             x = layer(x)
-            x = self.dropout(x)
             x = self.activation(x)
+            x = self.dropout(x)            
         return x

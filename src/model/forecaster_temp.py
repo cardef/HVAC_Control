@@ -1,6 +1,6 @@
 from torch import nn
 import torch
-from model.layers import attndecoder, conv1d, encoder, fcc
+from .layers import attndecoder, conv1d, encoder, fcc
 
 class ForecasterTemp(nn.Module):
     
@@ -10,7 +10,8 @@ class ForecasterTemp(nn.Module):
         self.dropout = nn.Dropout(0.2)
         self.encoder = encoder.Encoder(512, 512, 1)
         self.decoder = attndecoder.AttnDecoder(512, 512)
-        self.fcc = fcc.FCC([500, 200, 100, 50, 10, col_out], 0.2)
+        self.fcc = fcc.FCC([500, 200, 50], 0.2)
+        self.output = nn.LazyLinear(col_out)
         self.len_forecast = len_forecast
     def forward(self, x):
         x = self.conv1d(x)
@@ -23,4 +24,5 @@ class ForecasterTemp(nn.Module):
             out[i] = self.decoder(out[i-1], x)
         out = torch.stack(out, dim = 1)
         out = self.fcc(out)
+        out = self.output(out)
         return out

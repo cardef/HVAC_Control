@@ -69,9 +69,9 @@ temp_valid_set.to_csv(main_dir/'data'/'cleaned'/'temp'/'valid_set_imp.csv', inde
 temp_test_set.to_csv(main_dir/'data'/'cleaned'/'temp'/'test_set_imp.csv', index = False)
 dump(temp_preprocessor, open(main_dir/'data'/'cleaned'/'preprocessor'/'temp_preprocessor.pkl', 'wb'))
 
-temp_train_loader = DataLoader(Dataset(temp_train_set, time_window, len_forecast, col_temp_in+col_temp_ext), batch_size = 64, collate_fn = collate_fn)
-temp_valid_loader = DataLoader(Dataset(temp_valid_set, time_window, len_forecast, col_temp_in+col_temp_ext), batch_size = 64, collate_fn = collate_fn)
-temp_test_loader = DataLoader(Dataset(temp_test_set, time_window, len_forecast, col_temp_in+col_temp_ext), batch_size = 64, collate_fn = collate_fn)
+temp_train_loader = DataLoader(Dataset(temp_train_set, time_window, len_forecast, col_temp_in+col_temp_ext), batch_size = 64, collate_fn = collate_fn, num_workers=8)
+temp_valid_loader = DataLoader(Dataset(temp_valid_set, time_window, len_forecast, col_temp_in+col_temp_ext), batch_size = 64, collate_fn = collate_fn, num_workers=8)
+temp_test_loader = DataLoader(Dataset(temp_test_set, time_window, len_forecast, col_temp_in+col_temp_ext), batch_size = 64, collate_fn = collate_fn, num_workers=8)
 torch.save(temp_train_loader, main_dir/'data'/'cleaned'/'temp'/'train_loader.pt')
 torch.save(temp_valid_loader, main_dir/'data'/'cleaned'/'temp'/'valid_loader.pt')
 torch.save(temp_test_loader, main_dir/'data'/'cleaned'/'temp'/'test_loader.pt')
