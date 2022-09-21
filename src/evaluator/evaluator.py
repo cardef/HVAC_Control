@@ -40,11 +40,9 @@ class Evaluator():
             res_matrix[:,i*2 + 1] = self.prediction[:,i]
         print("Loss:", mean(self.loss_))
         columns = product(self.col_out, ['true', 'pred'])
-        res_df = pd.DataFrame(res_matrix, columns=columns)
-        print(self.timestamp)    
-        
-        print(res_df.columns)
-        res_df.columns = pd.MultiIndex.from_tuples(res_df.columns, names=['Variable','Type'])
+        res_df = pd.DataFrame(res_matrix, columns=columns)   
         res_df['date'] = pd.to_datetime(self.timestamp)
-        res_df.set_index('date')
+        res_df = res_df.set_index('date')
+        res_df.columns = pd.MultiIndex.from_tuples(res_df.columns, names=['Variable','Type'])
+        print(res_df)
         return res_df, mean(self.loss_)        
