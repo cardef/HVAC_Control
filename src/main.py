@@ -1,16 +1,16 @@
 
 from utils import MAIN_DIR
-import trainer.training as training
 import torch
-from model.forecaster_energy import ForecasterEnergy
-from model.forecaster_temp import ForecasterTemp
-from torch import nn
-from torch.optim import Adam
-from torch.optim.lr_scheduler import ReduceLROnPlateau
+from model.cnn_enc_dec_attn import CNNEncDecAttn
 from torch.utils.data import Dataset, DataLoader
 from data.dataset import Dataset
 from pathlib import Path
 import json
+from pytorch_lightning.trainer import Trainer
+from pytorch_lightning.callbacks.early_stopping import EarlyStopping
+from pytorch_lightning.callbacks import ModelCheckpoint
+
+checkpoint_callback = ModelCheckpoint(dirpath="my/path/", save_top_k=2, monitor="val_loss")
 
 main_dir = Path(__file__).parent.parent
 with open('config.json') as f:
@@ -21,26 +21,35 @@ with open('config.json') as f:
 energy_train_loader = torch.load(main_dir/'data'/'cleaned'/'energy'/'train_loader.pt')
 energy_valid_loader = torch.load(main_dir/'data'/'cleaned'/'energy'/'valid_loader.pt')
 
-forecaster_energy = ForecasterEnergy(len_forecast).to(dtype = torch.float)
-
-loss_fn = nn.MSELoss()
-optimizer = Adam(forecaster_energy.parameters())
-scheduler = ReduceLROnPlateau(optimizer, patience = 7)
-trainer = training.Trainer(forecaster_energy, loss_fn, optimizer, scheduler, logger_kwargs = None)
-
-trainer.fit(energy_train_loader, energy_valid_loader, 2)
-
-
 temp_train_loader = torch.load(main_dir/'data'/'cleaned'/'temp'/'train_loader.pt')
 temp_valid_loader = torch.load(main_dir/'data'/'cleaned'/'temp'/'valid_loader.pt')
 
-forecaster_temp = ForecasterTemp(len_forecast,len(col_out)).to(dtype = torch.float)
+forecaster_energy = CNNEncDecAttn(len_forecast,len(col_out), 
+                                lr = 3e-4, 
+                                conv_layers = [(512, 3, 1, 1)],
+                                linear_layers=[250, 100, 50, 10],
+                                hidden_size_enc=246,
+                                scheduler_patience=5,
+                                p_dropout=0.5).to(dtype = torch.float)
 
-loss_fn = nn.MSELoss()
-optimizer = Adam(forecaster_temp.parameters())
-scheduler = ReduceLROnPlateau(optimizer, patience = 7)
-trainer = training.Trainer(forecaster_temp, loss_fn, optimizer, scheduler, logger_kwargs = None)
+early_stopper = EarlyStopping(monitor = 'val_loss', mode = 'min', patience = 10, verbose = True)
+checkpoint_callback = ModelCheckpoint(dirpath=main_dir/'results'/'energy'/'checkpoint', save_top_k=1, monitor="val_loss")
 
+trainer = Trainer(accelerator='auto', default_root_dir=main_dir/'checkpoint'/'energy', auto_lr_find=False, callbacks=[early_stopper, checkpoint_callback], max_epochs=50)
+trainer.tune(forecaster_energy, energy_train_loader, energy_valid_loader)
+trainer.fit(forecaster_energy, energy_train_loader, energy_valid_loader)
+
+forecaster_temp = CNNEncDecAttn(len_forecast,len(col_out), 
+                                lr = 3e-4, 
+                                conv_layers = [(512, 3, 1, 1)],
+                                linear_layers=[250, 100, 50, 10],
+                                hidden_size_enc=246,
+                                scheduler_patience=5,
+                                p_dropout=0.5).to(dtype = torch.float)
+
+checkpoint_callback = ModelCheckpoint(dirpath=main_dir/'results'/'temp'/'checkpoint', save_top_k=1, monitor="val_loss")
+trainer = Trainer(accelerator='auto', default_root_dir=main_dir/'checkpoint'/'temp', auto_lr_find=False, callbacks=[early_stopper, checkpoint_callback], max_epochs=50)
+trainer.tune(forecaster_energy, temp_train_loader, temp_valid_loader)
 trainer.fit(temp_train_loader, temp_valid_loader, 2)
 
 torch.save(forecaster_energy.state_dict(),main_dir/'results'/'models'/'forecaster_energy.pt')

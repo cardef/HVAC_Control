@@ -8,7 +8,6 @@ class AttnDecoder(nn.Module):
         self.dec = nn.GRUCell(input_size=enc_hidden_size, hidden_size = hidden_size)
         self.query_proj = nn.LazyLinear(hidden_size)
         self.key_proj = nn.LazyLinear(hidden_size)
-        self.activation = nn.ReLU()
         self.w_v = nn.LazyLinear(1)
         
     def forward(self, hidden_prev, hidden_enc):
