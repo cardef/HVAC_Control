@@ -76,16 +76,22 @@ def tuner(train_loader, valid_loader):
                                                 num_gpus=1
                                                 )
 
+
     tuner = tune.Tuner(
         tune.with_resources(
             train_fn_with_parameters,
-            resources= {"cpu": 1, "gpu": 1}
+            resources= {"cpu": 56, "gpu": 1}
         ),
         tune_config=tune.TuneConfig(
             metric="loss",
             mode="min",
-            scheduler=scheduler,
-            num_samples=10,
+            scheduler= tune.search.bohb.HyperBandForBOHB(
+                time_attr="training_iteration",
+                metric="val_loss",
+                mode="min",
+                max_t=100),
+            search_alg= tune.search.bohb.TuneBOHB(metric="val_loss", mode="min")
+            num_samples=3,
         ),
         run_config=air.RunConfig(
             name="tuning",
