@@ -1,3 +1,4 @@
+from itertools import dropwhile
 from torch import nn
 import torch
 from model.layers import attndecoder, conv1d, encoder, fcc
@@ -5,16 +6,21 @@ import pytorch_lightning as pl
 
 class CNNEncDecAttn(pl.LightningModule):
     
-    def __init__(self, len_forecast, col_out, lr, p_dropout, conv_layers, linear_layers, hidden_size_enc, scheduler_patience):
+    def __init__(self, config, scheduler_patience = 5,conv_layers = [(512, 3, 1, 1)], linear_layers = [250, 100, 50, 10]):
         super(CNNEncDecAttn, self).__init__()
+        self.hidden_size_enc = int(config['hidden_size_enc'])
+        self.len_forecast = config['len_forecast']
+        self.col_out = config['col_out']
+        self.lr = config['lr']
+        self.p_dropout = config['p_dropout']
         self.conv1d = conv1d.Conv1d(conv_layers)
-        self.dropout = nn.Dropout(p_dropout)
-        self.encoder = encoder.Encoder(hidden_size_enc, hidden_size_enc, 1)
-        self.decoder = attndecoder.AttnDecoder(hidden_size_enc, hidden_size_enc)
-        self.fcc = fcc.FCC(linear_layers, p_dropout)
-        self.output = nn.LazyLinear(col_out)
-        self.len_forecast = len_forecast
-        self.lr = lr
+        self.dropout = nn.Dropout(self.p_dropout)
+        print(self.hidden_size_enc)
+        self.encoder = encoder.Encoder(conv_layers[-1][0], self.hidden_size_enc, 1)
+        self.decoder = attndecoder.AttnDecoder(self.hidden_size_enc, self.hidden_size_enc)
+        self.fcc = fcc.FCC(linear_layers, self.p_dropout)
+        self.output = nn.LazyLinear(self.col_out)
+        self.len_forecast = self.len_forecast
         self.scheduler_patience = scheduler_patience
         self.save_hyperparameters()
 

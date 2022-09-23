@@ -15,8 +15,7 @@ class Dataset(Dataset):
         col_ind_dict = col_out_to_index(dataframe, col_out)
         self.col_out_ind,_=zip(*col_ind_dict.values())
     def __len__(self):
-            return 64
-            #return int((self.tensor.size(0)-self.time_window-self.len_forecast)/self.len_forecast)+1
+            return int((self.tensor.size(0)-self.time_window-self.len_forecast)/self.len_forecast)+1
     
     def __getitem__(self, idx):
             seq_x, seq_y = self.tensor[self.len_forecast*idx:self.len_forecast*idx+self.time_window], self.tensor[self.len_forecast*idx+self.time_window: self.len_forecast*idx+self.time_window+self.len_forecast, self.col_out_ind]
