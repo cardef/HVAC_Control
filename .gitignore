@@ -2,7 +2,7 @@
 # This .gitignore file was automatically created by Microsoft(R) Visual Studio.
 ################################################################################
 
-/.vs
+/.vscode
 /dataset/doi_10.7941_D1N33Q__v6
 /dataset/energy
 /dataset/temperature
@@ -10,3 +10,4 @@
 /data
 /results
 /checkpoint
+/.vs
