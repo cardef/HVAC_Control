@@ -14,7 +14,10 @@ from pytorch_lightning.callbacks import ModelCheckpoint
 from ray import air, tune
 from ray.tune.integration.pytorch_lightning import TuneReportCallback
 from ray.tune.schedulers import ASHAScheduler
-
+from ray.tune.schedulers.hb_bohb import HyperBandForBOHB
+from ray.tune.search.bohb import TuneBOHB
+from data.dataset import collate_fn
+import pandas as pd
 checkpoint_callback = ModelCheckpoint(dirpath="my/path/", save_top_k=2, monitor="val_loss")
 
 main_dir = Path(__file__).parent.parent
@@ -22,26 +25,26 @@ with open('config.json') as f:
     config = json.load(f)
     col_out = config['PARAMETER']['DATA']['col_temp_in'] + config['PARAMETER']['DATA']['col_temp_ext']
     len_forecast = config['PARAMETER']['DATA']['len_forecast']
+    time_window = config['PARAMETER']['DATA']['time_window']
 
-energy_train_loader = torch.load(main_dir/'data'/'cleaned'/'energy'/'train_loader.pt')
-energy_valid_loader = torch.load(main_dir/'data'/'cleaned'/'energy'/'valid_loader.pt')
-
-temp_train_loader = torch.load(main_dir/'data'/'cleaned'/'temp'/'train_loader.pt')
-temp_valid_loader = torch.load(main_dir/'data'/'cleaned'/'temp'/'valid_loader.pt')
+energy_train_set = pd.read_csv(main_dir/'data'/'cleaned'/'energy'/'train_set_imp.csv')
+energy_valid_set =pd.read_csv(main_dir/'data'/'cleaned'/'energy'/'valid_set_imp.csv')
+energy_train_loader = DataLoader(Dataset(energy_train_set[:100], time_window, len_forecast, ['hvac']), batch_size = 64, collate_fn = collate_fn, num_workers = 2)
+energy_valid_loader = DataLoader(Dataset(energy_valid_set[:100], time_window, len_forecast, ['hvac']), batch_size = 64, collate_fn = collate_fn, num_workers = 2)
 
 sum = 0
 for a,b,c,d in energy_train_loader:
     sum += 1
 print(sum)
 
-def trainer_tuning(config, train_loader, valid_loader, num_epochs=10, num_gpus=0):
+def trainer_tuning(config, train_loader, valid_loader, num_epochs, num_gpus):
     model = CNNEncDecAttn(config)
     trainer = Trainer(
         max_epochs=num_epochs,
         gpus=num_gpus,
         logger=TensorBoardLogger(
             save_dir=os.getcwd(), name="", version="."),
-        enable_progress_bar=False,
+        enable_progress_bar=True,
         callbacks=[
             TuneReportCallback(
                 {
@@ -51,23 +54,11 @@ def trainer_tuning(config, train_loader, valid_loader, num_epochs=10, num_gpus=0
         ])
     trainer.fit(model,train_loader, valid_loader)
 
-def tuner(train_loader, valid_loader):
-    config = {
-        "len_forecast" : len_forecast,
-        "col_out" : 1,
-        "layer_1": tune.choice([32, 64, 128]),
-        "layer_2": tune.choice([64, 128, 256]),
-        "lr": tune.loguniform(1e-5, 1e-1),
-        "p_dropout": tune.uniform(0,1),
-        "hidden_size_enc": tune.qloguniform(32, 2048, base = 2, q =1)
-    }
+def tuner(train_loader, valid_loader, config):
 
-    num_epochs = 10
+    num_epochs = 2
 
-    scheduler = ASHAScheduler(
-    max_t=num_epochs,
-    grace_period=1,
-    reduction_factor=2)
+    
 
     train_fn_with_parameters = tune.with_parameters(trainer_tuning,
                                                 train_loader = train_loader,
@@ -80,21 +71,23 @@ def tuner(train_loader, valid_loader):
     tuner = tune.Tuner(
         tune.with_resources(
             train_fn_with_parameters,
-            resources= {"cpu": 56, "gpu": 1}
+            resources= {"gpu": 1}
         ),
         tune_config=tune.TuneConfig(
             metric="loss",
             mode="min",
-            scheduler= tune.search.bohb.HyperBandForBOHB(
-                time_attr="training_iteration",
-                metric="val_loss",
-                mode="min",
-                max_t=100),
-            search_alg= tune.search.bohb.TuneBOHB(metric="val_loss", mode="min")
-            num_samples=3,
+            scheduler = ASHAScheduler(
+                max_t=num_epochs,
+                grace_period=1,
+                reduction_factor=2),
+            search_alg = tune.search.basic_variant.BasicVariantGenerator(),
+            #search_alg= TuneBOHB(),
+            num_samples=2
+            
         ),
         run_config=air.RunConfig(
             name="tuning",
+            verbose = 3
         ),
         param_space=config,
     )
@@ -103,8 +96,15 @@ def tuner(train_loader, valid_loader):
 
     print("Best hyperparameters found were: ", results.get_best_result().config)
 
+config = {
+        "len_forecast" : len_forecast,
+        "col_out" : 1,
+        "lr": tune.loguniform(1e-5, 1e-1),
+        "p_dropout": tune.uniform(0,1),
+        "hidden_size_enc": tune.qloguniform(16, 32, base = 2, q =1)
+    }
 
-tuner(energy_train_loader, energy_valid_loader)
+tuner(energy_train_loader, energy_valid_loader, config)
 '''
 forecaster_energy = CNNEncDecAttn(len_forecast,len(col_out), 
                                 lr = 3e-4, 

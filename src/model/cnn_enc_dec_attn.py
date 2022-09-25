@@ -6,7 +6,7 @@ import pytorch_lightning as pl
 
 class CNNEncDecAttn(pl.LightningModule):
     
-    def __init__(self, config, scheduler_patience = 5,conv_layers = [(512, 3, 1, 1)], linear_layers = [250, 100, 50, 10]):
+    def __init__(self, config, scheduler_patience = 5,conv_layers = [(32, 3, 1, 1)], linear_layers = [10]):
         super(CNNEncDecAttn, self).__init__()
         self.hidden_size_enc = int(config['hidden_size_enc'])
         self.len_forecast = config['len_forecast']
