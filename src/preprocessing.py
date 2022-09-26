@@ -29,8 +29,8 @@ energy_df = merge(main_dir/'data'/'raw'/'doi_10.7941_D1N33Q__v6'/'Building_59'/'
 energy_df['hvac'] = energy_df['hvac_S']+energy_df['hvac_N']
 energy_df = energy_df.drop(['hvac_S', 'hvac_N', 'mels_S', 'lig_S', 'mels_N'], axis = 1)
 energy_df = energy_df.interpolate(method = 'spline', order = 5, axis = 0)
-energy_train_set, energy_test_set = split(energy_df)
-energy_train_set, energy_valid_set = split(energy_df, train_size = 0.9)
+energy_full_train_set, energy_test_set = split(energy_df)
+energy_train_set, energy_valid_set = split(energy_full_train_set, train_size = 0.9)
 energy_imputer = SimpleImputer()
 energy_preprocessor = Preprocessor(energy_imputer, ['date'])
 energy_preprocessor.fit(energy_train_set)
@@ -51,8 +51,8 @@ dump(energy_preprocessor, open(main_dir/'data'/'cleaned'/'preprocessor'/'energy_
 
 temp_df = merge(main_dir/'data'/'raw'/'doi_10.7941_D1N33Q__v6'/'Building_59'/'Bldg59_clean data', outdoor+hvac_op+indoor)
 temp_df = temp_df.interpolate(method = 'spline', order = 5, axis = 0)
-temp_train_set, temp_test_set = split(temp_df)
-temp_train_set, temp_valid_set = split(temp_df, train_size = 0.9)
+temp_full_train_set, temp_test_set = split(temp_df)
+temp_train_set, temp_valid_set = split(temp_full_train_set, train_size = 0.9)
 temp_imputer = SimpleImputer()
 temp_preprocessor = Preprocessor(temp_imputer, ['date'])
 temp_preprocessor.fit(temp_train_set)
