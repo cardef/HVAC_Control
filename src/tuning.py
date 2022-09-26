@@ -12,12 +12,14 @@ from pytorch_lightning.trainer import Trainer
 from pytorch_lightning.callbacks.early_stopping import EarlyStopping
 from pytorch_lightning.callbacks import ModelCheckpoint
 from ray import air, tune
-from ray.tune.integration.pytorch_lightning import TuneReportCallback
+from ray.tune.integration.pytorch_lightning import TuneReportCallback, TuneReportCheckpointCallback
 from ray.tune.schedulers import ASHAScheduler
 from ray.tune.schedulers.hb_bohb import HyperBandForBOHB
 from ray.tune.search.bohb import TuneBOHB
+from ray.tune.search.bayesopt.bayesopt_search import BayesOptSearch
 from data.dataset import collate_fn
 import pandas as pd
+from pickle import dump
 checkpoint_callback = ModelCheckpoint(dirpath="my/path/", save_top_k=2, monitor="val_loss")
 
 main_dir = Path(__file__).parent.parent
@@ -29,32 +31,34 @@ with open('config.json') as f:
 
 energy_train_set = pd.read_csv(main_dir/'data'/'cleaned'/'energy'/'train_set_imp.csv')
 energy_valid_set =pd.read_csv(main_dir/'data'/'cleaned'/'energy'/'valid_set_imp.csv')
-energy_train_loader = DataLoader(Dataset(energy_train_set[:100], time_window, len_forecast, ['hvac']), batch_size = 64, collate_fn = collate_fn, num_workers = 2)
-energy_valid_loader = DataLoader(Dataset(energy_valid_set[:100], time_window, len_forecast, ['hvac']), batch_size = 64, collate_fn = collate_fn, num_workers = 2)
+energy_train_loader = DataLoader(Dataset(energy_train_set, time_window, len_forecast, ['hvac']), batch_size = 64, collate_fn = collate_fn, num_workers = 14)
+energy_valid_loader = DataLoader(Dataset(energy_valid_set, time_window, len_forecast, ['hvac']), batch_size = 64, collate_fn = collate_fn, num_workers = 14)
 
 sum = 0
 for a,b,c,d in energy_train_loader:
     sum += 1
 print(sum)
 
-def trainer_tuning(config, train_loader, valid_loader, num_epochs, num_gpus):
+def trainer_tuning(config, train_loader, valid_loader, num_epochs, num_gpus, log_path):
     model = CNNEncDecAttn(config)
     trainer = Trainer(
         max_epochs=num_epochs,
         gpus=num_gpus,
-        logger=TensorBoardLogger(
-            save_dir=os.getcwd(), name="", version="."),
         enable_progress_bar=True,
+        logger=TensorBoardLogger(
+            save_dir=(log_path/'tb'), name="", version="."),
         callbacks=[
             TuneReportCallback(
                 {
                     "loss": "val_loss"
                 },
-                on="validation_end")
-        ])
+                on="validation_epoch_end"
+            )
+        ]
+    )
     trainer.fit(model,train_loader, valid_loader)
 
-def tuner(train_loader, valid_loader, config):
+def tuner(train_loader, valid_loader, config, log_path):
 
     num_epochs = 2
 
@@ -64,30 +68,29 @@ def tuner(train_loader, valid_loader, config):
                                                 train_loader = train_loader,
                                                 valid_loader = valid_loader,
                                                 num_epochs=num_epochs,
-                                                num_gpus=1
+                                                num_gpus=1,
+                                                log_path = log_path
                                                 )
 
 
     tuner = tune.Tuner(
         tune.with_resources(
             train_fn_with_parameters,
-            resources= {"gpu": 1}
+            resources= {"cpu":14, "gpu": 1}
         ),
         tune_config=tune.TuneConfig(
-            metric="loss",
+            metric="val_loss",
             mode="min",
-            scheduler = ASHAScheduler(
-                max_t=num_epochs,
-                grace_period=1,
-                reduction_factor=2),
+            scheduler = ASHAScheduler(),
             search_alg = tune.search.basic_variant.BasicVariantGenerator(),
-            #search_alg= TuneBOHB(),
-            num_samples=2
+            #search_alg= BayesOptSearch(),
+            num_samples=20
             
         ),
         run_config=air.RunConfig(
             name="tuning",
-            verbose = 3
+            verbose = 3,
+            local_dir= log_path
         ),
         param_space=config,
     )
@@ -95,16 +98,23 @@ def tuner(train_loader, valid_loader, config):
     results = tuner.fit()
 
     print("Best hyperparameters found were: ", results.get_best_result().config)
+    dump(results.get_best_result(), log_path/'best_results.pkl')
 
 config = {
         "len_forecast" : len_forecast,
         "col_out" : 1,
         "lr": tune.loguniform(1e-5, 1e-1),
         "p_dropout": tune.uniform(0,1),
-        "hidden_size_enc": tune.qloguniform(16, 32, base = 2, q =1)
+        "hidden_size_enc": tune.qloguniform(16, 1024, base = 2, q =1),
+        "conv_features": tune.qloguniform(16, 1024, base = 2, q =1),
+        "kernel_size": tune.choice([3,5,7,9,11]),
+        "linear_layer1" : tune.qrandint(10, 1000, q=10),
+        "linear_layer2" : tune.qrandint(10, 1000, q=10),
+        "linear_layer3" : tune.qrandint(10, 1000, q=10),
+        "linear_layer4" : tune.qrandint(10, 1000, q=10)
     }
 
-tuner(energy_train_loader, energy_valid_loader, config)
+tuner(energy_train_loader, energy_valid_loader, config, main_dir/'tuning'/'energy'/'cnn_lstm')
 '''
 forecaster_energy = CNNEncDecAttn(len_forecast,len(col_out), 
                                 lr = 3e-4, 

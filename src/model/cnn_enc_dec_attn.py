@@ -6,19 +6,18 @@ import pytorch_lightning as pl
 
 class CNNEncDecAttn(pl.LightningModule):
     
-    def __init__(self, config, scheduler_patience = 5,conv_layers = [(32, 3, 1, 1)], linear_layers = [10]):
+    def __init__(self, config, scheduler_patience = 5,conv_layers = [(32, 3, 1, 1)], linear_layers = [500,10]):
         super(CNNEncDecAttn, self).__init__()
         self.hidden_size_enc = int(config['hidden_size_enc'])
         self.len_forecast = config['len_forecast']
         self.col_out = config['col_out']
         self.lr = config['lr']
         self.p_dropout = config['p_dropout']
-        self.conv1d = conv1d.Conv1d(conv_layers)
+        self.conv1d = conv1d.Conv1d([(int(config['conv_features']), config['kernel_size'], 1, 1)])
         self.dropout = nn.Dropout(self.p_dropout)
-        print(self.hidden_size_enc)
-        self.encoder = encoder.Encoder(conv_layers[-1][0], self.hidden_size_enc, 1)
+        self.encoder = encoder.Encoder(int(config['conv_features']), self.hidden_size_enc, 1)
         self.decoder = attndecoder.AttnDecoder(self.hidden_size_enc, self.hidden_size_enc)
-        self.fcc = fcc.FCC(linear_layers, self.p_dropout)
+        self.fcc = fcc.FCC([config['linear_layer1'], config['linear_layer2'], config['linear_layer3'], config['linear_layer4']], self.p_dropout)
         self.output = nn.LazyLinear(self.col_out)
         self.len_forecast = self.len_forecast
         self.scheduler_patience = scheduler_patience

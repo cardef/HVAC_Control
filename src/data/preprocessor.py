@@ -1,5 +1,6 @@
 import pandas as pd
 import numpy as np
+from joblib import parallel_backend
 
 class Preprocessor():
 
@@ -25,8 +26,8 @@ class Preprocessor():
             IQR = Q3 - Q1
             self.lower_lim.append(Q1 - 1.5*IQR)
             self.upper_lim.append(Q3 + 1.5*IQR)
-
-        self.imputer = self.imputer.fit(df_cleaned)
+        with parallel_backend("threading", n_jobs = -1):
+            self.imputer = self.imputer.fit(df_cleaned)
         return self
 
     def transform(self, df):
