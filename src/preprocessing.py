@@ -28,7 +28,7 @@ path_cleaned = r'D:\My Drive\Uni\Vicomtech\Tesi\HVAC_Control\dataset'
 energy_df = merge(main_dir/'data'/'raw'/'doi_10.7941_D1N33Q__v6'/'Building_59'/'Bldg59_clean data', en+outdoor+hvac_op)
 energy_df['hvac'] = energy_df['hvac_S']+energy_df['hvac_N']
 energy_df = energy_df.drop(['hvac_S', 'hvac_N', 'mels_S', 'lig_S', 'mels_N'], axis = 1)
-
+energy_df = energy_df.interpolate(method = 'spline', order = 5, axis = 0)
 energy_train_set, energy_test_set = split(energy_df)
 energy_train_set, energy_valid_set = split(energy_df, train_size = 0.9)
 energy_imputer = SimpleImputer()
@@ -54,7 +54,7 @@ torch.save(energy_test_loader, main_dir/'data'/'cleaned'/'energy'/'test_loader.p
 
 
 temp_df = merge(main_dir/'data'/'raw'/'doi_10.7941_D1N33Q__v6'/'Building_59'/'Bldg59_clean data', outdoor+hvac_op+indoor)
-
+temp_df = temp_df.interpolate(method = 'spline', order = 5, axis = 0)
 temp_train_set, temp_test_set = split(temp_df)
 temp_train_set, temp_valid_set = split(temp_df, train_size = 0.9)
 temp_imputer = SimpleImputer()

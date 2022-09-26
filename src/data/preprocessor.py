@@ -26,7 +26,7 @@ class Preprocessor():
             self.lower_lim.append(Q1 - 1.5*IQR)
             self.upper_lim.append(Q3 + 1.5*IQR)
 
-        self.imputer = self.imputer.fit(df_cleaned)
+        #self.imputer = self.imputer.fit(df_cleaned)
         return self
 
     def transform(self, df):
@@ -37,7 +37,7 @@ class Preprocessor():
             outliers = (df_cleaned[col] < self.lower_lim[i]) | (df_cleaned[col] > self.upper_lim[i])
             df_cleaned[col] = df_cleaned[col].where(~outliers, np.nan)
 
-        df_cleaned = pd.DataFrame(self.imputer.transform(df_cleaned), columns = df_cleaned.columns)
+        #df_cleaned = pd.DataFrame(self.imputer.transform(df_cleaned), columns = df_cleaned.columns)
         df_cleaned = (df_cleaned-self.mean)/self.std
         
         df_cleaned[self.col_to_ignore] = df[self.col_to_ignore].copy()
