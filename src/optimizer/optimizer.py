@@ -1,0 +1,48 @@
+import numpy as np
+import math
+
+class Annealer():
+
+    def __init__(self, n_features, energy_model, temp_model, initial_temp = 90, final_temp = .1, alpha=0.01):
+        
+        self.initial_temp = initial_temp
+        self.final_temp = final_temp
+        self.alpha = alpha
+        self.n_features = n_features
+        self.energy_model = energy_model
+        self.temp_model = temp_model
+        
+    
+    def simulated_annealing(self, initial_state):
+        """Peforms simulated annealing to find a solution"""     
+        current_temp = self.initial_temp
+
+        # Start by initializing the current state with the initial state
+        current_state = initial_state
+        solution = current_state
+
+        while current_temp > self.final_temp:
+            neighbor = self.get_neighbor(current_state)
+
+            # Check if neighbor is best so far
+            cost_diff = self.get_cost(current_state) - self.get_cost(neighbor)
+
+            # if the new solution is better, accept it
+            if cost_diff > 0:
+                solution = neighbor
+            # if the new solution is not better, accept it with a probability of e^(-cost/temp)
+            else:
+                if np.random.uniform(0, 1) < math.exp(-cost_diff / current_temp):
+                    solution = neighbor
+            # decrement the temperature
+            current_temp -= self.alpha
+
+        return solution
+
+    def get_cost(self, state):
+        """Calculates cost of the argument state for your solution."""
+        raise NotImplementedError
+        
+    def get_neighbors(self, state):
+        """Returns neighbors of the argument state for your solution."""
+        raise NotImplementedError

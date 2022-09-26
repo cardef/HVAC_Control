@@ -26,9 +26,11 @@ path_cleaned = r'D:\My Drive\Uni\Vicomtech\Tesi\HVAC_Control\dataset'
 
 
 energy_df = merge(main_dir/'data'/'raw'/'doi_10.7941_D1N33Q__v6'/'Building_59'/'Bldg59_clean data', en+outdoor+hvac_op)
+print('Merge completed')
 energy_df['hvac'] = energy_df['hvac_S']+energy_df['hvac_N']
 energy_df = energy_df.drop(['hvac_S', 'hvac_N', 'mels_S', 'lig_S', 'mels_N'], axis = 1)
-energy_df = energy_df.interpolate(method = 'spline', order = 5, axis = 0)
+energy_df.loc[:, energy_df.columns != 'date'] = energy_df.drop('date', axis = 1).interpolate(method = 'polynomial', order = 5, axis = 0)
+print('Imputing completed')
 energy_full_train_set, energy_test_set = split(energy_df)
 energy_train_set, energy_valid_set = split(energy_full_train_set, train_size = 0.9)
 energy_imputer = SimpleImputer()
@@ -41,6 +43,8 @@ energy_test_set = energy_preprocessor.transform(energy_test_set)
 energy_preprocessor.fit(energy_full_train_set)
 energy_full_train_set=energy_preprocessor.transform(energy_full_train_set)
 
+print('Prep completed')
+
 energy_train_set.to_csv(main_dir/'data'/'cleaned'/'energy'/'train_set_imp.csv', index = False)
 energy_valid_set.to_csv(main_dir/'data'/'cleaned'/'energy'/'valid_set_imp.csv', index = False)
 energy_test_set.to_csv(main_dir/'data'/'cleaned'/'energy'/'test_set_imp.csv', index = False)
@@ -50,7 +54,11 @@ dump(energy_preprocessor, open(main_dir/'data'/'cleaned'/'preprocessor'/'energy_
 
 
 temp_df = merge(main_dir/'data'/'raw'/'doi_10.7941_D1N33Q__v6'/'Building_59'/'Bldg59_clean data', outdoor+hvac_op+indoor)
-temp_df = temp_df.interpolate(method = 'spline', order = 5, axis = 0)
+print('Merge completed')
+
+temp_df.loc[:, temp_df.columns != 'date'] = temp_df.drop('date', axis = 1).interpolate(method = 'polynomial', order = 5, axis = 0)
+print('Imputing completed')
+
 temp_full_train_set, temp_test_set = split(temp_df)
 temp_train_set, temp_valid_set = split(temp_full_train_set, train_size = 0.9)
 temp_imputer = SimpleImputer()
@@ -61,6 +69,7 @@ temp_valid_set = temp_preprocessor.transform(temp_valid_set)
 temp_test_set = temp_preprocessor.transform(temp_test_set)
 temp_preprocessor.fit(temp_full_train_set)
 temp_full_train_set=temp_preprocessor.transform(temp_full_train_set)
+print('Prep completed')
 
 
 temp_train_set.to_csv(main_dir/'data'/'cleaned'/'temp'/'train_set_imp.csv', index = False)
