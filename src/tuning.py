@@ -34,6 +34,12 @@ energy_valid_set =pd.read_csv(main_dir/'data'/'cleaned'/'energy'/'valid_set_imp.
 energy_train_loader = DataLoader(Dataset(energy_train_set, time_window, len_forecast, ['hvac']), batch_size = 64, collate_fn = collate_fn, num_workers = 14)
 energy_valid_loader = DataLoader(Dataset(energy_valid_set, time_window, len_forecast, ['hvac']), batch_size = 64, collate_fn = collate_fn, num_workers = 14)
 
+
+temp_train_set = pd.read_csv(main_dir/'data'/'cleaned'/'temp'/'train_set_imp.csv')
+temp_valid_set =pd.read_csv(main_dir/'data'/'cleaned'/'temp'/'valid_set_imp.csv')
+temp_train_loader = DataLoader(Dataset(temp_train_set, time_window, len_forecast, col_out), batch_size = 64, collate_fn = collate_fn, num_workers = 14)
+temp_valid_loader = DataLoader(Dataset(temp_valid_set, time_window, len_forecast, col_out), batch_size = 64, collate_fn = collate_fn, num_workers = 14)
+
 sum = 0
 for a,b,c,d in energy_train_loader:
     sum += 1
@@ -52,7 +58,7 @@ def trainer_tuning(config, train_loader, valid_loader, num_epochs, num_gpus, log
                 {
                     "loss": "val_loss"
                 },
-                on="validation_epoch_end"
+                on="epoch_end"
             )
         ]
     )
@@ -60,7 +66,7 @@ def trainer_tuning(config, train_loader, valid_loader, num_epochs, num_gpus, log
 
 def tuner(train_loader, valid_loader, config, log_path):
 
-    num_epochs = 2
+    num_epochs = 100
 
     
 
@@ -79,12 +85,12 @@ def tuner(train_loader, valid_loader, config, log_path):
             resources= {"cpu":14, "gpu": 1}
         ),
         tune_config=tune.TuneConfig(
-            metric="val_loss",
+            metric="loss",
             mode="min",
             scheduler = ASHAScheduler(),
             search_alg = tune.search.basic_variant.BasicVariantGenerator(),
             #search_alg= BayesOptSearch(),
-            num_samples=20
+            num_samples=50
             
         ),
         run_config=air.RunConfig(
@@ -98,9 +104,10 @@ def tuner(train_loader, valid_loader, config, log_path):
     results = tuner.fit()
 
     print("Best hyperparameters found were: ", results.get_best_result().config)
-    dump(results.get_best_result(), log_path/'best_results.pkl')
+    with open(log_path/'best_results.pkl', 'wb') as f:
+        dump(results.get_best_result(), f)
 
-config = {
+config_en = {
         "len_forecast" : len_forecast,
         "col_out" : 1,
         "lr": tune.loguniform(1e-5, 1e-1),
@@ -114,7 +121,28 @@ config = {
         "linear_layer4" : tune.qrandint(10, 1000, q=10)
     }
 
-tuner(energy_train_loader, energy_valid_loader, config, main_dir/'tuning'/'energy'/'cnn_lstm')
+
+config_temp = config_en
+config_temp['col_out'] = len(col_out)
+print(config_temp)
+model = CNNEncDecAttn({
+        "len_forecast" : 4,
+        "col_out" : 67,
+        "lr": 3e-4,
+        "p_dropout": 0.2,
+        "hidden_size_enc": 512,
+        "conv_features": 512,
+        "kernel_size": 3,
+        "linear_layer1" : 500,
+        "linear_layer2" : 200,
+        "linear_layer3" : 150,
+        "linear_layer4" : 100
+    }, scheduler_patience=5)
+for x,y,_,_ in temp_train_loader:
+    print(model.forward(x).shape, y.shape)
+    break 
+#tuner(energy_train_loader, energy_valid_loader, config_en, main_dir/'tuning'/'energy'/'cnn_lstm')
+tuner(temp_train_loader, temp_valid_loader, config_temp, main_dir/'tuning'/'temp'/'cnn_lstm')
 '''
 forecaster_energy = CNNEncDecAttn(len_forecast,len(col_out), 
                                 lr = 3e-4, 

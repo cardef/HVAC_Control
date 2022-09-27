@@ -11,3 +11,6 @@
 /results
 /checkpoint
 /.vs
+/checkpoints
+.gitignore
+/tuning

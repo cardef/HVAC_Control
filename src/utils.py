@@ -13,6 +13,9 @@ def merge(path, csv_list):
         dataframe = pd.read_csv(path/dataframe_name)
         dataframe['date']  = pd.to_datetime(dataframe['date'])
         dataframe = dataframe.drop_duplicates(subset = ['date'], keep = 'first')
+        max_date = max(dataframe['date'])
+        min_date = min(dataframe['date'])
+        df = df[(df['date'] <= max_date) & (df['date'] >= min_date)]
         df = pd.merge_asof(df, dataframe, on = 'date', tolerance = pd.Timedelta('10min'))
         df.drop(df.filter(regex="Unnamed"),axis=1, inplace=True)
 

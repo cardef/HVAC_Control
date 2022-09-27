@@ -1,7 +1,7 @@
 import pandas as pd
 import numpy as np
 from joblib import parallel_backend
-
+from fancyimpute import MatrixFactorization
 class Preprocessor():
 
     def __init__(self, imputer, col_to_ignore):
@@ -19,7 +19,7 @@ class Preprocessor():
         df_cleaned = df.drop(self.col_const+self.col_to_ignore, axis = 1)
         self.mean = df_cleaned.mean(axis = 0)
         self.std = df_cleaned.std(axis = 0)
-
+        df_cleaned = (df_cleaned-self.mean)/self.std
         for col in list(df_cleaned.columns):
             Q1 = df_cleaned[col].quantile(0.25)
             Q3 = df_cleaned[col].quantile(0.75)
@@ -27,19 +27,20 @@ class Preprocessor():
             self.lower_lim.append(Q1 - 1.5*IQR)
             self.upper_lim.append(Q3 + 1.5*IQR)
 
-        #self.imputer = self.imputer.fit(df_cleaned)
+        self.imputer = self.imputer.fit(df_cleaned)
         return self
 
     def transform(self, df):
         df = df
         df_cleaned = df.drop(self.col_const + self.col_to_ignore, axis = 1)
-        
+        df_cleaned = (df_cleaned-self.mean)/self.std
         for i, col in enumerate(list(df_cleaned.columns)):
             outliers = (df_cleaned[col] < self.lower_lim[i]) | (df_cleaned[col] > self.upper_lim[i])
             df_cleaned[col] = df_cleaned[col].where(~outliers, np.nan)
-
-        #df_cleaned = pd.DataFrame(self.imputer.transform(df_cleaned), columns = df_cleaned.columns)
-        df_cleaned = (df_cleaned-self.mean)/self.std
+        
+        df_cleaned = pd.DataFrame(self.imputer.transform(df_cleaned), columns = df_cleaned.columns)
+        print(df_cleaned.isnull().sum())
+        
         
         df_cleaned[self.col_to_ignore] = df[self.col_to_ignore].copy()
         return df_cleaned
