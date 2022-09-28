@@ -1,4 +1,3 @@
-from itertools import dropwhile
 from torch import nn
 import torch
 from model.layers import attndecoder, conv1d, encoder, fcc
@@ -19,7 +18,6 @@ class CNNEncDecAttn(pl.LightningModule):
         self.decoder = attndecoder.AttnDecoder(self.hidden_size_enc, self.hidden_size_enc)
         self.fcc = fcc.FCC([config['linear_layer1'], config['linear_layer2'], config['linear_layer3'], config['linear_layer4']], self.p_dropout)
         self.output = nn.LazyLinear(self.col_out)
-        self.len_forecast = self.len_forecast
         self.scheduler_patience = scheduler_patience
         self.save_hyperparameters()
 

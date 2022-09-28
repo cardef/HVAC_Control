@@ -22,9 +22,11 @@
                       "zone_061_temp", "zone_062_temp", "zone_063_temp", "zone_064_temp",
                       "zone_065_temp", "zone_066_temp", "zone_067_temp", "zone_068_temp",
                       "zone_069_temp", "zone_070_temp", "zone_071_temp", "zone_072_temp"],
-      
-        "time_window" : 96,
-        "len_forecast":4
+      "outdoor" : ["site_weather.csv"],
+      "hvac_op" : ["hp_hws_temp.csv", "rtu_sa_t_sp.csv", "rtu_sa_t.csv", "rtu_ra_t.csv", "rtu_ma_t.csv","rtu_oa_t.csv", "rtu_sa_fr.csv", "rtu_oa_damper.csv", "rtu_econ_sp.csv", "rtu_sa_p_sp.csv", "rtu_plenum_p.csv", "rtu_fan_spd.csv", "uft_fan_spd.csv", "uft_hw_valve.csv"],
+      "indoor" : ["zone_temp_sp_c.csv", "zone_temp_sp_h.csv", "zone_temp_interior.csv", "zone_temp_exterior.csv"],
+      "time_window" : 96,
+      "len_forecast":4
     }
   }
 }  

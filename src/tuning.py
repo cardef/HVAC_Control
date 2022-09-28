@@ -40,10 +40,6 @@ temp_valid_set =pd.read_csv(main_dir/'data'/'cleaned'/'temp'/'valid_set_imp.csv'
 temp_train_loader = DataLoader(Dataset(temp_train_set, time_window, len_forecast, col_out), batch_size = 64, collate_fn = collate_fn, num_workers = 14)
 temp_valid_loader = DataLoader(Dataset(temp_valid_set, time_window, len_forecast, col_out), batch_size = 64, collate_fn = collate_fn, num_workers = 14)
 
-sum = 0
-for a,b,c,d in energy_train_loader:
-    sum += 1
-print(sum)
 
 def trainer_tuning(config, train_loader, valid_loader, num_epochs, num_gpus, log_path):
     model = CNNEncDecAttn(config)
@@ -124,19 +120,7 @@ config_en = {
 
 config_temp = config_en
 config_temp['col_out'] = len(col_out)
-model = CNNEncDecAttn({
-        "len_forecast" : 4,
-        "col_out" : 67,
-        "lr": 3e-4,
-        "p_dropout": 0.2,
-        "hidden_size_enc": 512,
-        "conv_features": 512,
-        "kernel_size": 3,
-        "linear_layer1" : 500,
-        "linear_layer2" : 200,
-        "linear_layer3" : 150,
-        "linear_layer4" : 100
-    }, scheduler_patience=5)
+
  
 tuner(energy_train_loader, energy_valid_loader, config_en, main_dir/'tuning'/'energy'/'cnn_lstm')
 tuner(temp_train_loader, temp_valid_loader, config_temp, main_dir/'tuning'/'temp'/'cnn_lstm')
