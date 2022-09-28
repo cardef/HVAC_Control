@@ -40,13 +40,13 @@ energy_results.config['col_out'] = 1
 
 
 forecaster_temp = CNNEncDecAttn(temp_results.config)
-trainer = Trainer(accelerator='auto',  auto_lr_find=False, max_epochs=100)
+trainer = Trainer(accelerator='auto',  auto_lr_find=False, max_epochs=5)
 trainer.fit(forecaster_temp, temp_full_train_loader, temp_test_loader)
 trainer.save_checkpoint(MAIN_DIR/'results'/'models'/'forecaster_temp.ckpt')
 
 
 
 forecaster_energy = CNNEncDecAttn(energy_results.config)
-trainer = Trainer(accelerator='auto',  auto_lr_find=False, max_epochs=100)
+trainer = Trainer(accelerator='auto',  auto_lr_find=False, max_epochs=5)
 trainer.fit(forecaster_energy, energy_full_train_loader, energy_test_loader)
 trainer.save_checkpoint(MAIN_DIR/'results'/'models'/'forecaster_energy.ckpt')
