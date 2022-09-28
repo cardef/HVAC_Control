@@ -124,7 +124,6 @@ config_en = {
 
 config_temp = config_en
 config_temp['col_out'] = len(col_out)
-print(config_temp)
 model = CNNEncDecAttn({
         "len_forecast" : 4,
         "col_out" : 67,
@@ -138,10 +137,8 @@ model = CNNEncDecAttn({
         "linear_layer3" : 150,
         "linear_layer4" : 100
     }, scheduler_patience=5)
-for x,y,_,_ in temp_train_loader:
-    print(model.forward(x).shape, y.shape)
-    break 
-#tuner(energy_train_loader, energy_valid_loader, config_en, main_dir/'tuning'/'energy'/'cnn_lstm')
+ 
+tuner(energy_train_loader, energy_valid_loader, config_en, main_dir/'tuning'/'energy'/'cnn_lstm')
 tuner(temp_train_loader, temp_valid_loader, config_temp, main_dir/'tuning'/'temp'/'cnn_lstm')
 '''
 forecaster_energy = CNNEncDecAttn(len_forecast,len(col_out), 

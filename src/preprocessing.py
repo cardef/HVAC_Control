@@ -8,15 +8,15 @@ from pathlib import Path
 from torch.utils.data import DataLoader
 import json
 import torch
-from fancyimpute import MatrixFactorization
-from data.missforest import MissForest
+#from fancyimpute import MatrixFactorization
 from sklearn.experimental import enable_iterative_imputer
 import sys
 import sklearn.neighbors._base
+from data.imputer import Imputer
 import missingno as msno
 import pandas as pd
-
-sys.modules['sklearn.neighbors.base'] = sklearn.neighbors._base
+import numpy as np
+from statistics import mean
 
 with open('config.json') as f:
     config = json.load(f)
@@ -35,30 +35,34 @@ path_raw = r'D:\My Drive\Uni\Vicomtech\Tesi\HVAC_Control\dataset\doi_10.7941_D1N
 path_cleaned = r'D:\My Drive\Uni\Vicomtech\Tesi\HVAC_Control\dataset'
 
 try:
-    energy_df = pd.read_csv(main_dir/'data'/'raw'/'doi_10.7941_D1N33Q__v6'/'Building_59'/'Bldg59_clean data'/'energy.csv') 
+    energy_df = pd.read_csv(main_dir/'data'/'lbnlbldg59'/'lbnlbldg59.processed'/'LBNLBLDG59'/'clean_Bldg59_2018to2020'/'clean data'/'energy.csv') 
 except:
-    energy_df = merge(main_dir/'data'/'raw'/'doi_10.7941_D1N33Q__v6'/'Building_59'/'Bldg59_clean data', en+outdoor+hvac_op)
-    print('Merge completed')
+    energy_df = merge(main_dir/'data'/'lbnlbldg59'/'lbnlbldg59.processed'/'LBNLBLDG59'/'clean_Bldg59_2018to2020'/'clean data', en+outdoor+hvac_op)
     energy_df['hvac'] = energy_df['hvac_S']+energy_df['hvac_N']
     energy_df = energy_df.drop(['hvac_S', 'hvac_N', 'mels_S', 'lig_S', 'mels_N'], axis = 1)
-    energy_df.to_csv(main_dir/'data'/'raw'/'doi_10.7941_D1N33Q__v6'/'Building_59'/'Bldg59_clean data'/'energy.csv', index=False)
+    energy_df.to_csv(main_dir/'data'/'lbnlbldg59'/'lbnlbldg59.processed'/'LBNLBLDG59'/'clean_Bldg59_2018to2020'/'clean data'/'energy.csv', index=False)
 
-#energy_df.loc[:, energy_df.columns != 'date'] = energy_df.drop('date', axis = 1).interpolate(method = 'polynomial', order = 5, axis = 0, limit=4)
-#energy_df.loc[:, energy_df.columns != 'date'] = MatrixFactorization().fit_transform(energy_df.loc[:, energy_df.columns != 'date'])
+energy_preprocessor = Preprocessor(['date'], scaling = False)
+energy_preprocessor.fit(energy_df)
+energy_df = energy_preprocessor.transform(energy_df)
+imputer = Imputer(energy_df, 'date', 500, 100)
+
+energy_df = imputer.impute()
 print(energy_df.isnull().sum().sum())
 
-energy_full_train_set, energy_test_set = split(energy_df[energy_df['date'] >= '2019-04-01'])
+
+
+energy_full_train_set, energy_test_set = split(energy_df)
 energy_train_set, energy_valid_set = split(energy_full_train_set, train_size = 0.9)
-energy_imputer = IterativeImputer(n_nearest_features=100, skip_complete=True, verbose = 2, max_iter = 50)
-energy_preprocessor = Preprocessor(energy_imputer, ['date'])
+energy_preprocessor = Preprocessor(['date'], outliers=False)
 energy_preprocessor.fit(energy_train_set)
 energy_train_set = energy_preprocessor.transform(energy_train_set)
 energy_valid_set = energy_preprocessor.transform(energy_valid_set)
-energy_test_set = energy_preprocessor.transform(energy_test_set)
+
 
 energy_preprocessor.fit(energy_full_train_set)
 energy_full_train_set=energy_preprocessor.transform(energy_full_train_set)
-
+energy_test_set = energy_preprocessor.transform(energy_test_set)
 print('Prep completed')
 
 energy_train_set.to_csv(main_dir/'data'/'cleaned'/'energy'/'train_set_imp.csv', index = False)
@@ -69,30 +73,31 @@ dump(energy_preprocessor, open(main_dir/'data'/'cleaned'/'preprocessor'/'energy_
 
 
 try:
-    temp_df = pd.read_csv(main_dir/'data'/'raw'/'doi_10.7941_D1N33Q__v6'/'Building_59'/'Bldg59_clean data'/'temp.csv') 
+    temp_df = pd.read_csv(main_dir/'data'/'lbnlbldg59'/'lbnlbldg59.processed'/'LBNLBLDG59'/'clean_Bldg59_2018to2020'/'clean data'/'temp.csv') 
 
 except:
-    temp_df = merge(main_dir/'data'/'raw'/'doi_10.7941_D1N33Q__v6'/'Building_59'/'Bldg59_clean data', outdoor+hvac_op+indoor)
-    temp_df.to_csv(main_dir/'data'/'raw'/'doi_10.7941_D1N33Q__v6'/'Building_59'/'Bldg59_clean data'/'temp.csv', index=False)
+    temp_df = merge(main_dir/'data'/'lbnlbldg59'/'lbnlbldg59.processed'/'LBNLBLDG59'/'clean_Bldg59_2018to2020'/'clean data', outdoor+hvac_op+indoor)
+    temp_df.to_csv(main_dir/'data'/'lbnlbldg59'/'lbnlbldg59.processed'/'LBNLBLDG59'/'clean_Bldg59_2018to2020'/'clean data'/'temp.csv', index=False)
 
-print('Merge completed')
 
-#temp_df.loc[:, temp_df.columns != 'date'] = temp_df.drop('date', axis = 1).interpolate(method = 'polynomial', order = 5, axis = 0, limit=4)
-print('Imputing completed')
-#temp_df.loc[:, temp_df.columns != 'date'] = MatrixFactorization().fit_transform(temp_df.loc[:, temp_df.columns != 'date'])
+temp_preprocessor = Preprocessor(['date'], scaling = False)
+temp_preprocessor.fit(temp_df)
+temp_df = temp_preprocessor.transform(temp_df)
+imputer = Imputer(temp_df, 'date', 500, 100)
 
-temp_full_train_set, temp_test_set = split(temp_df[temp_df['date'] >= '2019-04-01'])
+temp_df = imputer.impute()
+print(temp_df.isnull().sum().sum())
+
+temp_full_train_set, temp_test_set = split(temp_df)
 temp_train_set, temp_valid_set = split(temp_full_train_set, train_size = 0.9)
-temp_imputer = IterativeImputer(n_nearest_features=100, skip_complete=True, verbose = 2, max_iter = 50)
-temp_preprocessor = Preprocessor(temp_imputer, ['date'])
+temp_preprocessor = Preprocessor(['date'], outliers=False)
 temp_preprocessor.fit(temp_train_set)
 temp_train_set = temp_preprocessor.transform(temp_train_set)
 temp_valid_set = temp_preprocessor.transform(temp_valid_set)
-temp_test_set = temp_preprocessor.transform(temp_test_set)
+
 temp_preprocessor.fit(temp_full_train_set)
 temp_full_train_set=temp_preprocessor.transform(temp_full_train_set)
-print('Prep completed')
-
+temp_test_set = temp_preprocessor.transform(temp_test_set)
 
 temp_train_set.to_csv(main_dir/'data'/'cleaned'/'temp'/'train_set_imp.csv', index = False)
 temp_valid_set.to_csv(main_dir/'data'/'cleaned'/'temp'/'valid_set_imp.csv', index = False)
