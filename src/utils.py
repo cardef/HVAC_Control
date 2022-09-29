@@ -16,7 +16,7 @@ def merge(path, csv_list):
         max_date = max(dataframe['date'])
         min_date = min(dataframe['date'])
         df = df[(df['date'] <= max_date) & (df['date'] >= min_date)]
-        df = pd.merge_asof(df, dataframe, on = 'date', tolerance = pd.Timedelta('10min'))
+        df = pd.merge_asof(df, dataframe, on = 'date', tolerance = pd.Timedelta('30min'))
         df.drop(df.filter(regex="Unnamed"),axis=1, inplace=True)
 
         

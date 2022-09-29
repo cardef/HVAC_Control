@@ -2,16 +2,13 @@ from email.errors import MissingHeaderBodySeparatorDefect
 from utils import MAIN_DIR, merge, split
 from data.preprocessor import Preprocessor
 from data.dataset import Dataset, collate_fn
-from sklearn.impute import KNNImputer, SimpleImputer, IterativeImputer
+
 from pickle import dump
 from pathlib import Path
 from torch.utils.data import DataLoader
 import json
 import torch
-#from fancyimpute import MatrixFactorization
-from sklearn.experimental import enable_iterative_imputer
 import sys
-import sklearn.neighbors._base
 from data.imputer import Imputer
 import missingno as msno
 import pandas as pd
@@ -42,35 +39,38 @@ except:
     energy_df = energy_df.drop(['hvac_S', 'hvac_N', 'mels_S', 'lig_S', 'mels_N'], axis = 1)
     energy_df.to_csv(main_dir/'data'/'lbnlbldg59'/'lbnlbldg59.processed'/'LBNLBLDG59'/'clean_Bldg59_2018to2020'/'clean data'/'energy.csv', index=False)
 
-energy_preprocessor = Preprocessor(['date'], scaling = False)
+
+energy_preprocessor = Preprocessor(['date'], scaling = False, remove_col_const=True)
 energy_preprocessor.fit(energy_df)
 energy_df = energy_preprocessor.transform(energy_df)
-imputer = Imputer(energy_df, 'date', 500, 100)
-
+imputer = Imputer(energy_df, 'date', n_factors = 50, n_epoch = 500, lr = 1e-1, penalty = 1e-6)
 energy_df = imputer.impute()
-print(energy_df.isnull().sum().sum())
 
 
 
 energy_full_train_set, energy_test_set = split(energy_df)
-energy_train_set, energy_valid_set = split(energy_full_train_set, train_size = 0.9)
-energy_preprocessor = Preprocessor(['date'], outliers=False)
-energy_preprocessor.fit(energy_train_set)
-energy_train_set = energy_preprocessor.transform(energy_train_set)
-energy_valid_set = energy_preprocessor.transform(energy_valid_set)
-
-
+energy_preprocessor = Preprocessor(['date'], outliers=False, remove_col_const=False)
 energy_preprocessor.fit(energy_full_train_set)
 energy_full_train_set=energy_preprocessor.transform(energy_full_train_set)
 energy_test_set = energy_preprocessor.transform(energy_test_set)
+dump(energy_preprocessor, open(main_dir/'data'/'cleaned'/'preprocessor'/'energy_full_train_preprocessor.pkl', 'wb'))
+
+
+energy_train_set, energy_valid_set = split(energy_full_train_set, train_size = 0.9)
+energy_preprocessor = Preprocessor(['date'], outliers=False, remove_col_const=False)
+energy_preprocessor.fit(energy_train_set)
+energy_train_set = energy_preprocessor.transform(energy_train_set)
+energy_valid_set = energy_preprocessor.transform(energy_valid_set)
+dump(energy_preprocessor, open(main_dir/'data'/'cleaned'/'preprocessor'/'energy_train_preprocessor.pkl', 'wb'))
+
+
+
 print('Prep completed')
 
 energy_train_set.to_csv(main_dir/'data'/'cleaned'/'energy'/'train_set_imp.csv', index = False)
 energy_valid_set.to_csv(main_dir/'data'/'cleaned'/'energy'/'valid_set_imp.csv', index = False)
 energy_test_set.to_csv(main_dir/'data'/'cleaned'/'energy'/'test_set_imp.csv', index = False)
 energy_full_train_set.to_csv(main_dir/'data'/'cleaned'/'energy'/'full_train_set_imp.csv', index = False)
-dump(energy_preprocessor, open(main_dir/'data'/'cleaned'/'preprocessor'/'energy_preprocessor.pkl', 'wb'))
-
 
 try:
     temp_df = pd.read_csv(main_dir/'data'/'lbnlbldg59'/'lbnlbldg59.processed'/'LBNLBLDG59'/'clean_Bldg59_2018to2020'/'clean data'/'temp.csv') 
@@ -80,7 +80,7 @@ except:
     temp_df.to_csv(main_dir/'data'/'lbnlbldg59'/'lbnlbldg59.processed'/'LBNLBLDG59'/'clean_Bldg59_2018to2020'/'clean data'/'temp.csv', index=False)
 
 
-temp_preprocessor = Preprocessor(['date'], scaling = False)
+temp_preprocessor = Preprocessor(['date'], scaling = False, remove_col_const=True)
 temp_preprocessor.fit(temp_df)
 temp_df = temp_preprocessor.transform(temp_df)
 imputer = Imputer(temp_df, 'date', 500, 100)
@@ -89,18 +89,22 @@ temp_df = imputer.impute()
 print(temp_df.isnull().sum().sum())
 
 temp_full_train_set, temp_test_set = split(temp_df)
-temp_train_set, temp_valid_set = split(temp_full_train_set, train_size = 0.9)
-temp_preprocessor = Preprocessor(['date'], outliers=False)
-temp_preprocessor.fit(temp_train_set)
-temp_train_set = temp_preprocessor.transform(temp_train_set)
-temp_valid_set = temp_preprocessor.transform(temp_valid_set)
-
+temp_preprocessor = Preprocessor(['date'], outliers=False, remove_col_const=False)
 temp_preprocessor.fit(temp_full_train_set)
 temp_full_train_set=temp_preprocessor.transform(temp_full_train_set)
 temp_test_set = temp_preprocessor.transform(temp_test_set)
+dump(temp_preprocessor, open(main_dir/'data'/'cleaned'/'preprocessor'/'temp_full_train_preprocessor.pkl', 'wb'))
+
+
+
+temp_train_set, temp_valid_set = split(temp_full_train_set, train_size = 0.9)
+temp_preprocessor = Preprocessor(['date'], outliers=False, remove_col_const=False)
+temp_preprocessor.fit(temp_train_set)
+temp_train_set = temp_preprocessor.transform(temp_train_set)
+temp_valid_set = temp_preprocessor.transform(temp_valid_set)
+dump(temp_preprocessor, open(main_dir/'data'/'cleaned'/'preprocessor'/'temp_train_preprocessor.pkl', 'wb'))
 
 temp_train_set.to_csv(main_dir/'data'/'cleaned'/'temp'/'train_set_imp.csv', index = False)
 temp_valid_set.to_csv(main_dir/'data'/'cleaned'/'temp'/'valid_set_imp.csv', index = False)
 temp_test_set.to_csv(main_dir/'data'/'cleaned'/'temp'/'test_set_imp.csv', index = False)
 temp_full_train_set.to_csv(main_dir/'data'/'cleaned'/'temp'/'full_train_set_imp.csv', index = False)
-dump(temp_preprocessor, open(main_dir/'data'/'cleaned'/'preprocessor'/'temp_preprocessor.pkl', 'wb'))

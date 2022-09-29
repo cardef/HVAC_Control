@@ -1,10 +1,9 @@
 import pandas as pd
 import numpy as np
-from joblib import parallel_backend
-from fancyimpute import MatrixFactorization
+
 class Preprocessor():
 
-    def __init__(self, col_to_ignore, scaling = True, outliers = True, remove_col_const = True):
+    def __init__(self, col_to_ignore = [], scaling = True, outliers = True, remove_col_const = True):
 
         self.col_const = []
         self.lower_lim = []
@@ -24,6 +23,7 @@ class Preprocessor():
         if self.scaling:
             self.mean = df_cleaned.mean(axis = 0)
             self.std = df_cleaned.std(axis = 0)
+            self.std.where(self.std == 0, 1, inplace = True)
             df_cleaned = (df_cleaned-self.mean)/self.std
         
         if self.outliers:
@@ -38,7 +38,6 @@ class Preprocessor():
         return self
 
     def transform(self, df):
-        df = df
         df_cleaned = df.drop(self.col_const + self.col_to_ignore, axis = 1)
         df_cleaned = (df_cleaned-self.mean)/self.std
         

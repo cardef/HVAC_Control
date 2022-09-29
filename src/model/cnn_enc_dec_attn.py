@@ -59,8 +59,8 @@ class CNNEncDecAttn(pl.LightningModule):
     def predict_step(self, batch, batch_idx):
         X, Y, timestamp_x, timestamp_y = batch
         pred = self(X)
-        pred = pred.view(-1, pred.size(2)).numpy()
-        truth = Y.view(-1, Y.size(2)).numpy()
+        pred = pred.view(-1, pred.size(2)).cpu().numpy()
+        truth = Y.view(-1, Y.size(2)).cpu().numpy()
         
         return pred, truth, timestamp_y
         

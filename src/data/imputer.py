@@ -5,19 +5,31 @@ from pytorch_lightning.trainer import Trainer
 import pandas as pd
 
 class Imputer():
-    def __init__(self, df, col_to_ignore, n_features, n_epochs):
+    def __init__(self, df, col_to_ignore, n_features, n_epochs, lr, penalty):
         self.features_name = df.drop(col_to_ignore, axis = 1).columns
         self.df = df
         self.mean =  df.drop(col_to_ignore, axis = 1).mean(axis = 0)
         self.std =  df.drop(col_to_ignore, axis = 1).std(axis = 0)
+        self.std.where(self.std == 0, 1, inplace = True)
         self.df_scaled = (df.drop(col_to_ignore, axis = 1)-self.mean)/self.std
-        self.matrix =  torch.Tensor(np.array(self.df_scaled))
+        self.matrix =  np.array(self.df_scaled)
+        self.train_matrix = self.matrix
+        self.test_matrix = np.empty((self.matrix.shape[0], self.matrix.shape[1]))
+        self.test_matrix[:] = np.nan
+        random_ind = (np.random.choice(self.matrix.shape[0], int(self.matrix.size*0.3), replace = True), np.random.choice(self.matrix.shape[1], int(self.matrix.size*0.3), replace = True))
+        self.test_matrix[random_ind] = self.matrix[random_ind]
+        self.train_matrix[random_ind] = np.nan
         self.col_to_ignore = col_to_ignore
-        self.model = MatrixFactorization(self.matrix, n_features)
+        self.matrix=torch.Tensor(self.matrix)
+        self.train_matrix = torch.Tensor(self.train_matrix)
+        self.test_matrix = torch.Tensor(self.test_matrix)
+        self.model = MatrixFactorization(self.train_matrix, n_features)
         self.device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
-        self.optimizer = torch.optim.SparseAdam(self.model.parameters(), lr=0.1)
+        self.optimizer = torch.optim.Adam(self.model.parameters(), lr=self.lr)
         self.scheduler = torch.optim.lr_scheduler.ReduceLROnPlateau(optimizer=self.optimizer, patience= 100, factor=0.5)
         self.n_epochs = n_epochs
+        self.lr = lr
+        self.penalty = penalty
     def mse_loss_with_nans(self, input, target):
 
         # Missing data are nan's
@@ -25,10 +37,10 @@ class Imputer():
 
         # Missing data are 0's
         #mask = target == 0
-
-        out = (input[~mask]-target[~mask])**2
-        loss = out.mean()
-
+        reg = 0
+        for param in self.model.parameters():
+            reg += 0.5 * (param ** 2).sum()
+        loss = ((input[~mask]-target[~mask])**2).mean().sqrt() + self.penalty*reg
         return loss
 
     def impute(self):
@@ -40,18 +52,24 @@ class Imputer():
             
            
             # Predict and calculate loss
-            prediction = self.model().to(self.device)
-            loss = self.mse_loss_with_nans(prediction, self.matrix.to(self.device))
-            print(loss.item())
+            prediction = self.model(self.train_matrix).to(self.device)
+            train_loss = self.mse_loss_with_nans(prediction, self.train_matrix.to(self.device))
+            
 
             # Backpropagate
-            loss.backward()
+            train_loss.backward()
 
             # Update the parameters
             self.optimizer.step()
-            self.scheduler.step(loss.item())
+            
 
-        matrix_pred = self.model()
+            with torch.no_grad():
+                prediction = self.model(self.test_matrix).to(self.device)
+                test_loss = self.mse_loss_with_nans(prediction, self.test_matrix.to(self.device))
+                
+                print(train_loss.item(), test_loss.item())
+            self.scheduler.step(test_loss.item())
+        matrix_pred = self.model(self.matrix)
         matrix_imputed = torch.where(torch.isnan(self.matrix), matrix_pred.to("cpu"), self.matrix)
         matrix_imputed = pd.DataFrame(matrix_imputed.detach().cpu().numpy(), columns=self.features_name)
         matrix_imputed = matrix_imputed*self.std + self.mean
