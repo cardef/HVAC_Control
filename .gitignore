@@ -15,10 +15,4 @@
 .gitignore
 /tuning
 /data2
-lightning_logs/version_26797/hparams.yaml
-lightning_logs/version_26797/checkpoints/epoch=0-step=155-v1.ckpt
-lightning_logs/version_26797/checkpoints/epoch=0-step=155.ckpt
-lightning_logs/version_26798/events.out.tfevents.1664380405.sheldon.43982.0
-lightning_logs/version_26798/hparams.yaml
-lightning_logs/version_26799/events.out.tfevents.1664380423.sheldon.43982.1
-lightning_logs/version_26799/hparams.yaml
+/lightning_logs
