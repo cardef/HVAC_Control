@@ -70,12 +70,21 @@ class Merger():
             cleaned_csv = json.load(f)
 
 
-        cleaned_csv[self.key] = {}
-        cleaned_csv[self.key]['features'] = features
-        cleaned_csv[self.key]['col_const'] = col_const
+        dict_prep = {self.key : {}}
+        dict_prep[self.key]['features'] = features
+        dict_prep[self.key]['col_const'] = col_const
 
-        with open(self.cleaned_csv_json, 'w') as f:
-            json.dump(cleaned_csv, f, indent=2)
+        try:
+            with open(self.cleaned_csv_json, 'r') as f:
+                cleaned_csv_json = json.load(f)
+        
+        except:    
+            with open(self.cleaned_csv_json, 'w') as f:
+                json.dump(dict_prep, f, indent=2)
+        
+        else:
+            cleaned_csv_json.update(dict_prep)
+            
 
         torch.cuda.empty_cache()
 
