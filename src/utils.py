@@ -4,23 +4,7 @@ from pathlib import Path
 
 MAIN_DIR = Path(__file__).parent.parent
 
-def merge(path, csv_list):
-    df = pd.read_csv(path/csv_list[0])
-    df['date'] = pd.to_datetime(df['date'])
-    df = df.drop_duplicates(subset = ['date'], keep='first')
-    df['date'] = pd.Series(pd.date_range(min(df['date']), max(df['date']), freq = '15min'))
-    for dataframe_name in csv_list[1:]:
-        dataframe = pd.read_csv(path/dataframe_name)
-        dataframe['date']  = pd.to_datetime(dataframe['date'])
-        dataframe = dataframe.drop_duplicates(subset = ['date'], keep = 'first')
-        max_date = max(dataframe['date'])
-        min_date = min(dataframe['date'])
-        df = df[(df['date'] <= max_date) & (df['date'] >= min_date)]
-        df = pd.merge_asof(df, dataframe, on = 'date', tolerance = pd.Timedelta('30min'))
-        df.drop(df.filter(regex="Unnamed"),axis=1, inplace=True)
 
-        
-    return df
 
 def remove_outliers(df):
     for col in list(df.columns):

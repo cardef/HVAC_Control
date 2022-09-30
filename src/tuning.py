@@ -20,25 +20,35 @@ from ray.tune.search.bayesopt.bayesopt_search import BayesOptSearch
 from data.dataset import collate_fn
 import pandas as pd
 from pickle import dump
-checkpoint_callback = ModelCheckpoint(dirpath="my/path/", save_top_k=2, monitor="val_loss")
+checkpoint_callback = ModelCheckpoint(
+    dirpath="my/path/", save_top_k=2, monitor="val_loss")
 
 main_dir = Path(__file__).parent.parent
 with open('config.json') as f:
     config = json.load(f)
-    col_out = config['PARAMETER']['DATA']['col_temp_in'] + config['PARAMETER']['DATA']['col_temp_ext']
+    col_out = config['PARAMETER']['DATA']['col_temp_in'] + \
+        config['PARAMETER']['DATA']['col_temp_ext']
     len_forecast = config['PARAMETER']['DATA']['len_forecast']
     time_window = config['PARAMETER']['DATA']['time_window']
 
-energy_train_set = pd.read_csv(main_dir/'data'/'cleaned'/'energy'/'train_set_imp.csv')
-energy_valid_set =pd.read_csv(main_dir/'data'/'cleaned'/'energy'/'valid_set_imp.csv')
-energy_train_loader = DataLoader(Dataset(energy_train_set, time_window, len_forecast, ['hvac']), batch_size = 64, collate_fn = collate_fn, num_workers = 14)
-energy_valid_loader = DataLoader(Dataset(energy_valid_set, time_window, len_forecast, ['hvac']), batch_size = 64, collate_fn = collate_fn, num_workers = 14)
+energy_train_set = pd.read_csv(
+    main_dir/'data'/'cleaned'/'energy'/'train_set_imp.csv')
+energy_valid_set = pd.read_csv(
+    main_dir/'data'/'cleaned'/'energy'/'valid_set_imp.csv')
+energy_train_loader = DataLoader(Dataset(energy_train_set, time_window, len_forecast, [
+                                 'hvac']), batch_size=64, collate_fn=collate_fn, num_workers=14)
+energy_valid_loader = DataLoader(Dataset(energy_valid_set, time_window, len_forecast, [
+                                 'hvac']), batch_size=64, collate_fn=collate_fn, num_workers=14)
 
 
-temp_train_set = pd.read_csv(main_dir/'data'/'cleaned'/'temp'/'train_set_imp.csv')
-temp_valid_set =pd.read_csv(main_dir/'data'/'cleaned'/'temp'/'valid_set_imp.csv')
-temp_train_loader = DataLoader(Dataset(temp_train_set, time_window, len_forecast, col_out), batch_size = 64, collate_fn = collate_fn, num_workers = 14)
-temp_valid_loader = DataLoader(Dataset(temp_valid_set, time_window, len_forecast, col_out), batch_size = 64, collate_fn = collate_fn, num_workers = 14)
+temp_train_set = pd.read_csv(
+    main_dir/'data'/'cleaned'/'temp'/'train_set_imp.csv')
+temp_valid_set = pd.read_csv(
+    main_dir/'data'/'cleaned'/'temp'/'valid_set_imp.csv')
+temp_train_loader = DataLoader(Dataset(temp_train_set, time_window, len_forecast,
+                               col_out), batch_size=64, collate_fn=collate_fn, num_workers=14)
+temp_valid_loader = DataLoader(Dataset(temp_valid_set, time_window, len_forecast,
+                               col_out), batch_size=64, collate_fn=collate_fn, num_workers=14)
 
 
 def trainer_tuning(config, train_loader, valid_loader, num_epochs, num_gpus, log_path):
@@ -58,72 +68,74 @@ def trainer_tuning(config, train_loader, valid_loader, num_epochs, num_gpus, log
             )
         ]
     )
-    trainer.fit(model,train_loader, valid_loader)
+    trainer.fit(model, train_loader, valid_loader)
+
 
 def tuner(train_loader, valid_loader, config, log_path):
 
     num_epochs = 100
 
-    
-
     train_fn_with_parameters = tune.with_parameters(trainer_tuning,
-                                                train_loader = train_loader,
-                                                valid_loader = valid_loader,
-                                                num_epochs=num_epochs,
-                                                num_gpus=1,
-                                                log_path = log_path
-                                                )
-
+                                                    train_loader=train_loader,
+                                                    valid_loader=valid_loader,
+                                                    num_epochs=num_epochs,
+                                                    num_gpus=1,
+                                                    log_path=log_path
+                                                    )
 
     tuner = tune.Tuner(
         tune.with_resources(
             train_fn_with_parameters,
-            resources= {"cpu":14, "gpu": 1}
+            resources={"cpu": 14, "gpu": 1}
         ),
         tune_config=tune.TuneConfig(
             metric="loss",
             mode="min",
-            scheduler = ASHAScheduler(),
-            search_alg = tune.search.basic_variant.BasicVariantGenerator(),
-            #search_alg= BayesOptSearch(),
-            num_samples=50
-            
+            scheduler=ASHAScheduler(),
+            #search_alg=tune.search.basic_variant.BasicVariantGenerator(),
+            search_alg= BayesOptSearch(),
+            num_samples=10
+
         ),
         run_config=air.RunConfig(
             name="tuning",
-            verbose = 3,
-            local_dir= log_path
+            verbose=3,
+            local_dir=log_path
         ),
         param_space=config,
     )
 
     results = tuner.fit()
 
-    print("Best hyperparameters found were: ", results.get_best_result().config)
+    print("Best hyperparameters found were: ",
+          results.get_best_result().config)
     with open(log_path/'best_results.pkl', 'wb') as f:
         dump(results.get_best_result(), f)
 
+
 config_en = {
-        "len_forecast" : len_forecast,
-        "col_out" : 1,
-        "lr": tune.loguniform(1e-5, 1e-1),
-        "p_dropout": tune.uniform(0,1),
-        "hidden_size_enc": tune.qloguniform(16, 1024, base = 2, q =1),
-        "conv_features": tune.qloguniform(16, 1024, base = 2, q =1),
-        "kernel_size": tune.choice([3,5,7,9,11]),
-        "linear_layer1" : tune.qrandint(10, 1000, q=10),
-        "linear_layer2" : tune.qrandint(10, 1000, q=10),
-        "linear_layer3" : tune.qrandint(10, 1000, q=10),
-        "linear_layer4" : tune.qrandint(10, 1000, q=10)
-    }
+    "len_forecast": len_forecast,
+    "col_out": 1,
+    "lr": tune.loguniform(1e-5, 1e-1),
+    "p_dropout": tune.uniform(0, 1),
+    "hidden_size_enc": tune.qloguniform(16, 1024, base=2, q=1),
+    "conv_features": tune.qloguniform(16, 1024, base=2, q=1),
+    "kernel_size": tune.choice([3, 5, 7, 9, 11]),
+    "linear_layer1": tune.qrandint(10, 1000, q=10),
+    "linear_layer2": tune.qrandint(10, 1000, q=10),
+    "linear_layer3": tune.qrandint(10, 1000, q=10),
+    "linear_layer4": tune.qrandint(10, 1000, q=10)
+}
 
 
 config_temp = config_en
 config_temp['col_out'] = len(col_out)
 
- 
-tuner(energy_train_loader, energy_valid_loader, config_en, main_dir/'tuning'/'energy'/'cnn_lstm')
-tuner(temp_train_loader, temp_valid_loader, config_temp, main_dir/'tuning'/'temp'/'cnn_lstm')
+
+tuner(energy_train_loader, energy_valid_loader,
+      config_en, main_dir/'tuning'/'energy'/'cnn_lstm')
+tuner(temp_train_loader, temp_valid_loader,
+      config_temp, main_dir/'tuning'/'temp'/'cnn_lstm')
 '''
 forecaster_energy = CNNEncDecAttn(len_forecast,len(col_out), 
                                 lr = 3e-4, 

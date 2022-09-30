@@ -1,5 +1,5 @@
 from utils import MAIN_DIR, merge, split
-from data.preprocessor import Preprocessor
+from src.data.preprocesser import Preprocessor
 from data.dataset import Dataset, collate_fn
 from sklearn.impute import KNNImputer, SimpleImputer
 from pickle import dump
