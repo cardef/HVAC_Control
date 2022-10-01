@@ -11,7 +11,7 @@ class Imputer():
         self.df = df
         self.mean = df.drop(col_to_ignore, axis=1).mean(axis=0)
         self.std = df.drop(col_to_ignore, axis=1).std(axis=0)
-        self.std.where(self.std == 0, 1, inplace=True)
+        self.std.where(self.std != 0, 1, inplace=True)
         self.df_scaled = (df.drop(col_to_ignore, axis=1)-self.mean)/self.std
         self.matrix = np.array(self.df_scaled)
         self.train_matrix = self.matrix
