@@ -26,10 +26,13 @@ checkpoint_callback = ModelCheckpoint(
 main_dir = Path(__file__).parent.parent
 with open('config.json') as f:
     config = json.load(f)
-    col_out = config['PARAMETER']['DATA']['col_temp_in'] + \
-        config['PARAMETER']['DATA']['col_temp_ext']
-    len_forecast = config['PARAMETER']['DATA']['len_forecast']
-    time_window = config['PARAMETER']['DATA']['time_window']
+
+with open("cleaned_csv.json") as f:
+    cleaned_csv = json.load(f)
+len_forecast = config['len_forecast']
+time_window = config['time_window']
+col_out_temp = cleaned_csv['temp']['col_out']
+
 
 energy_train_set = pd.read_csv(
     main_dir/'data'/'cleaned'/'energy'/'train_set_imp.csv')
@@ -46,9 +49,9 @@ temp_train_set = pd.read_csv(
 temp_valid_set = pd.read_csv(
     main_dir/'data'/'cleaned'/'temp'/'valid_set_imp.csv')
 temp_train_loader = DataLoader(Dataset(temp_train_set, time_window, len_forecast,
-                               col_out), batch_size=64, collate_fn=collate_fn, num_workers=14)
+                               col_out_temp), batch_size=64, collate_fn=collate_fn, num_workers=6)
 temp_valid_loader = DataLoader(Dataset(temp_valid_set, time_window, len_forecast,
-                               col_out), batch_size=64, collate_fn=collate_fn, num_workers=14)
+                               col_out_temp), batch_size=64, collate_fn=collate_fn, num_workers=6)
 
 
 def trainer_tuning(config, train_loader, valid_loader, num_epochs, num_gpus, log_path):
@@ -65,7 +68,8 @@ def trainer_tuning(config, train_loader, valid_loader, num_epochs, num_gpus, log
                     "loss": "val_loss"
                 },
                 on="epoch_end"
-            )
+            ),
+
         ]
     )
     trainer.fit(model, train_loader, valid_loader)
@@ -73,7 +77,7 @@ def trainer_tuning(config, train_loader, valid_loader, num_epochs, num_gpus, log
 
 def tuner(train_loader, valid_loader, config, log_path):
 
-    num_epochs = 100
+    num_epochs = 150
 
     train_fn_with_parameters = tune.with_parameters(trainer_tuning,
                                                     train_loader=train_loader,
@@ -92,9 +96,10 @@ def tuner(train_loader, valid_loader, config, log_path):
             metric="loss",
             mode="min",
             scheduler=ASHAScheduler(),
-            #search_alg=tune.search.basic_variant.BasicVariantGenerator(),
-            search_alg= BayesOptSearch(),
-            num_samples=10
+            #search_alg= BayesOptSearch(),
+            search_alg=tune.search.basic_variant.BasicVariantGenerator(),
+            
+            num_samples=1000
 
         ),
         run_config=air.RunConfig(
@@ -117,19 +122,21 @@ config_en = {
     "len_forecast": len_forecast,
     "col_out": 1,
     "lr": tune.loguniform(1e-5, 1e-1),
-    "p_dropout": tune.uniform(0, 1),
+    "p_dropout_conv": tune.uniform(0, 1),
+    "p_dropout_fc": tune.uniform(0, 1),
     "hidden_size_enc": tune.qloguniform(16, 1024, base=2, q=1),
     "conv_features": tune.qloguniform(16, 1024, base=2, q=1),
     "kernel_size": tune.choice([3, 5, 7, 9, 11]),
     "linear_layer1": tune.qrandint(10, 1000, q=10),
     "linear_layer2": tune.qrandint(10, 1000, q=10),
     "linear_layer3": tune.qrandint(10, 1000, q=10),
-    "linear_layer4": tune.qrandint(10, 1000, q=10)
+    "linear_layer4": tune.qrandint(10, 1000, q=10),
+    "linear_layer5": tune.qrandint(10, 1000, q=10)
 }
 
 
 config_temp = config_en
-config_temp['col_out'] = len(col_out)
+config_temp['col_out'] = len(col_out_temp)
 
 
 tuner(energy_train_loader, energy_valid_loader,

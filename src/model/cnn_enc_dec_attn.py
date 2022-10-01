@@ -11,19 +11,20 @@ class CNNEncDecAttn(pl.LightningModule):
         self.len_forecast = config['len_forecast']
         self.col_out = config['col_out']
         self.lr = config['lr']
-        self.p_dropout = config['p_dropout']
+        self.p_dropout_conv = config['p_dropout_conv']
+        self.p_dropout_fc = config['p_dropout_fc']
         self.conv1d = conv1d.Conv1d([(int(config['conv_features']), config['kernel_size'], 1, 1)])
-        self.dropout = nn.Dropout(self.p_dropout)
+        self.dropout_conv = nn.Dropout(self.p_dropout_conv)
         self.encoder = encoder.Encoder(int(config['conv_features']), self.hidden_size_enc, 1)
         self.decoder = attndecoder.AttnDecoder(self.hidden_size_enc, self.hidden_size_enc)
-        self.fcc = fcc.FCC([config['linear_layer1'], config['linear_layer2'], config['linear_layer3'], config['linear_layer4']], self.p_dropout)
+        self.fcc = fcc.FCC([config['linear_layer1'], config['linear_layer2'], config['linear_layer3'], config['linear_layer4'], config['linear_layer5']], self.p_dropout_fc)
         self.output = nn.LazyLinear(self.col_out)
         self.scheduler_patience = scheduler_patience
         self.save_hyperparameters()
 
     def forward(self, x):
         x = self.conv1d(x)
-        x = self.dropout(x)
+        x = self.dropout_conv(x)
         x, h = self.encoder(x.transpose(1,2))
 
         out = [None] * self.len_forecast

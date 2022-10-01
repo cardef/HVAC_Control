@@ -27,6 +27,7 @@ class Merger():
         features = []
         col_const = []
         df = pd.read_csv(self.path/self.csv_list[0])
+        df.drop(df.filter(regex="^Unnamed").columns, axis=1, inplace=True)
         df = df.drop_duplicates(subset=['date'], keep='first', ignore_index=True)
         df['date'] = pd.to_datetime(df['date'])
         
@@ -35,7 +36,6 @@ class Merger():
 
         self.preprocesser.fit(df)
         df = self.preprocesser.transform(df)
-        print(self.preprocesser.col_const)
         col_const.extend(self.preprocesser.col_const)
         imputer = Imputer(df, ['date'], 100, 50, 1e-1, 1e-8)
         df = imputer.impute()
@@ -44,6 +44,7 @@ class Merger():
         for dataframe_name in self.csv_list[1:]:
             print(dataframe_name)
             dataframe = pd.read_csv(self.path/dataframe_name)
+            dataframe.drop(dataframe.filter(regex="^Unnamed").columns, axis=1, inplace=True)
             dataframe = dataframe.drop_duplicates(
                 subset=['date'], keep='first', ignore_index = True)
             dataframe['date'] = pd.to_datetime(dataframe['date'], errors='raise')
@@ -53,21 +54,24 @@ class Merger():
             col_const.extend(self.preprocesser.col_const)
 
          
-            imputer = Imputer(dataframe, ['date'], 100, 50, 1e-1, 1e-8)
-            dataframe = imputer.impute()
-           
+            
+            
             max_date = max(dataframe['date'])
             min_date = min(dataframe['date'])
             df = df[(df['date'] <= max_date) & (df['date'] >= min_date)]
-            
+            dataframe = pd.merge_asof(df['date'], dataframe, on='date',
+                               tolerance=pd.Timedelta('15min'))
+            imputer = Imputer(dataframe, ['date'], 100, 50, 1e-1, 1e-8)
+            dataframe = imputer.impute()
+
             df = pd.merge_asof(df, dataframe, on='date',
                                tolerance=pd.Timedelta('15min'))
-            df.drop(df.filter(regex="Unnamed"), axis=1, inplace=True)
+            df.drop(df.filter(regex="^Unnamed").columns, axis=1, inplace=True)
+            
+
             features.extend(list(dataframe.drop('date', axis = 1).columns))
             torch.cuda.empty_cache()
         
-        with open(self.cleaned_csv_json, 'r') as f:
-            cleaned_csv = json.load(f)
 
 
         dict_prep = {self.key : {}}
@@ -84,6 +88,8 @@ class Merger():
         
         else:
             cleaned_csv_json.update(dict_prep)
+            with open(self.cleaned_csv_json, "w") as f:
+                json.dump(cleaned_csv_json, f, indent = 2) 
             
 
         torch.cuda.empty_cache()
