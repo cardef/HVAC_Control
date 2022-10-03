@@ -22,7 +22,7 @@ from ray.tune.search.bayesopt.bayesopt_search import BayesOptSearch
 from data.dataset import collate_fn
 import pandas as pd
 from pickle import dump
-from ray.tune.search.dragonfly import DragonflySearch
+import numpy as np
 
 checkpoint_callback = ModelCheckpoint(
     dirpath="my/path/", save_top_k=2, monitor="val_loss")
@@ -43,9 +43,9 @@ energy_train_set = pd.read_csv(
 energy_valid_set = pd.read_csv(
     main_dir/'data'/'cleaned'/'energy'/'valid_set_imp.csv')
 energy_train_loader = DataLoader(Dataset(energy_train_set, time_window,
-                                 len_forecast, "energy"), batch_size=64, collate_fn=collate_fn, num_workers=14)
+                                 len_forecast, "energy"), batch_size=64, collate_fn=collate_fn, num_workers=0)
 energy_valid_loader = DataLoader(Dataset(energy_valid_set, time_window,
-                                 len_forecast, "energy"), batch_size=64, collate_fn=collate_fn, num_workers=14)
+                                 len_forecast, "energy"), batch_size=64, collate_fn=collate_fn, num_workers=0)
 
 
 temp_train_set = pd.read_csv(
@@ -53,9 +53,9 @@ temp_train_set = pd.read_csv(
 temp_valid_set = pd.read_csv(
     main_dir/'data'/'cleaned'/'temp'/'valid_set_imp.csv')
 temp_train_loader = DataLoader(Dataset(temp_train_set, time_window, len_forecast,
-                               'temp'), batch_size=64, collate_fn=collate_fn, num_workers=6)
+                               'temp'), batch_size=64, collate_fn=collate_fn, num_workers=0)
 temp_valid_loader = DataLoader(Dataset(temp_valid_set, time_window, len_forecast,
-                               'temp'), batch_size=64, collate_fn=collate_fn, num_workers=6)
+                               'temp'), batch_size=64, collate_fn=collate_fn, num_workers=0)
 
 
 def trainer_tuning(config, train_loader, valid_loader, num_epochs, num_gpus, log_path):
@@ -64,8 +64,6 @@ def trainer_tuning(config, train_loader, valid_loader, num_epochs, num_gpus, log
         "max_epochs": num_epochs,
         "gpus": num_gpus,
         "enable_progress_bar": True,
-        "logger": TensorBoardLogger(
-            save_dir=(log_path/'tb'), name="", version="."),
         "callbacks": [
             TuneReportCheckpointCallback(
                 {
@@ -73,7 +71,8 @@ def trainer_tuning(config, train_loader, valid_loader, num_epochs, num_gpus, log
                 },
                 filename="checkpoint",
                 on="epoch_end"
-            )
+            ),
+            EarlyStopping(monitor="val_loss", min_delta=0.00, patience=5, verbose=True, mode="min")
 
         ]
     }
@@ -89,7 +88,7 @@ def trainer_tuning(config, train_loader, valid_loader, num_epochs, num_gpus, log
 
 def tuner(train_loader, valid_loader, config, name, log_path):
 
-    num_epochs = 20
+    num_epochs = 100
 
     train_fn_with_parameters = tune.with_parameters(trainer_tuning,
                                                     train_loader=train_loader,
@@ -102,20 +101,17 @@ def tuner(train_loader, valid_loader, config, name, log_path):
     tuner = tune.Tuner(
         tune.with_resources(
             train_fn_with_parameters,
-            resources={"cpu": 14, "gpu": 1}
+            resources={"cpu": 4, "gpu": 1}
         ),
         tune_config=tune.TuneConfig(
             metric="val_loss",
             mode="min",
-            scheduler=PopulationBasedTraining(
-                perturbation_interval=4,
-                hyperparam_mutations={
-                    "lr": tune.loguniform(1e-5, 1e0),
-                }),
+            scheduler=ASHAScheduler(),
+            
             # search_alg= BayesOptSearch(),
-             # search_alg=tune.search.basic_variant.BasicVariantGenerator(),
+            search_alg=tune.search.basic_variant.BasicVariantGenerator(),
 
-            num_samples=10
+            num_samples=100
 
         ),
         run_config=air.RunConfig(
@@ -124,7 +120,7 @@ def tuner(train_loader, valid_loader, config, name, log_path):
             local_dir=log_path,
             callbacks=[
                 WandbLoggerCallback(
-                    api_key="86a2ba8c8e41892c3c639a87cdd7c01bd034116f", project="MPC")
+                    api_key="86a2ba8c8e41892c3c639a87cdd7c01bd034116f", project="MPC", log_config=True, group = "name")
             ],
         ),
         param_space=config,
@@ -145,20 +141,20 @@ config_en = {
     "p_dropout_conv": tune.uniform(0, 1),
     "p_dropout_fc": tune.uniform(0, 1),
     "hidden_size_enc": tune.qloguniform(16, 1024, base=2, q=1),
-    "conv_features": tune.qloguniform(16, 1024, base=2, q=1),
-    "kernel_size": tune.choice([3, 5, 7, 9, 11]),
-    "linear_layer1": tune.qrandint(10, 1000, q=10),
-    "linear_layer2": tune.qrandint(10, 1000, q=10),
-    "linear_layer3": tune.qrandint(10, 1000, q=10)
+    "conv_layers": tune.randint(1,4),
+    "linear_layers":tune.randint(1,11),
+    "conv_features" :tune.sample_from(lambda spec: 2**np.random.randint(1,10, size = spec.config.conv_layers)),
+    "conv_kernels": tune.sample_from(lambda spec: 2*np.random.randint(1,5, size = spec.config.conv_layers)+1),
+    "linear_neurons":tune.sample_from(lambda spec: 10*np.random.randint(1,100, size = spec.config.linear_layers))
 }
 
 
-config_temp = config_en
+config_temp = config_en.copy()
 config_temp['col_out'] = len(col_out_temp)
 
 
-tuner(energy_train_loader, energy_valid_loader,
-      config_en, 'energy', main_dir/'tuning'/'energy'/'cnn_lstm')
+#tuner(energy_train_loader, energy_valid_loader,
+      #config_en, 'energy', main_dir/'tuning'/'energy'/'cnn_lstm')
 tuner(temp_train_loader, temp_valid_loader,
       config_temp, 'temp', main_dir/'tuning'/'temp'/'cnn_lstm')
 '''

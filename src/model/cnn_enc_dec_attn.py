@@ -13,11 +13,12 @@ class CNNEncDecAttn(pl.LightningModule):
         self.lr = config['lr']
         self.p_dropout_conv = config['p_dropout_conv']
         self.p_dropout_fc = config['p_dropout_fc']
-        self.conv1d = conv1d.Conv1d([(int(config['conv_features']), config['kernel_size'], 1, 1)])
+        print(config["conv_layers"])
+        self.conv1d = conv1d.Conv1d(zip(config['conv_features'], config['conv_kernels']))
         self.dropout_conv = nn.Dropout(self.p_dropout_conv)
-        self.encoder = encoder.Encoder(int(config['conv_features']), self.hidden_size_enc, 1)
+        self.encoder = encoder.Encoder(config['conv_features'][-1], self.hidden_size_enc, 1)
         self.decoder = attndecoder.AttnDecoder(self.hidden_size_enc, self.hidden_size_enc)
-        self.fcc = fcc.FCC([config['linear_layer1'], config['linear_layer2'], config['linear_layer3']], self.p_dropout_fc)
+        self.fcc = fcc.FCC(config["linear_neurons"], self.p_dropout_fc)
         self.output = nn.LazyLinear(self.col_out)
         self.scheduler_patience = scheduler_patience
         self.save_hyperparameters()
