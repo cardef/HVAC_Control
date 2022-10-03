@@ -6,13 +6,14 @@ import pandas as pd
 
 
 class Imputer():
-    def __init__(self, df, col_to_ignore, n_features, n_epochs, lr, penalty):
-        self.features_name = df.drop(col_to_ignore, axis=1).columns
+    def __init__(self, df, n_features, n_epochs, lr, penalty):
+        self.features_name = df.columns
         self.df = df
-        self.mean = df.drop(col_to_ignore, axis=1).mean(axis=0)
-        self.std = df.drop(col_to_ignore, axis=1).std(axis=0)
-        self.std.where(self.std != 0, 1, inplace=True)
-        self.df_scaled = (df.drop(col_to_ignore, axis=1)-self.mean)/self.std
+        self.min = df.min(axis=0)
+        self.max = df.max(axis=0)
+        norm = self.max-self.min
+        norm.where(norm !=0, 1, inplace=True)
+        self.df_scaled = (df-self.min)/norm
         self.matrix = np.array(self.df_scaled)
         self.train_matrix = self.matrix
         self.test_matrix = np.empty(
@@ -22,7 +23,6 @@ class Imputer():
             self.matrix.size*0.3), replace=True), np.random.choice(self.matrix.shape[1], int(self.matrix.size*0.3), replace=True))
         self.test_matrix[random_ind] = self.matrix[random_ind]
         self.train_matrix[random_ind] = np.nan
-        self.col_to_ignore = col_to_ignore
         self.matrix = torch.Tensor(self.matrix)
         self.train_matrix = torch.Tensor(self.train_matrix)
         self.test_matrix = torch.Tensor(self.test_matrix)
@@ -81,9 +81,9 @@ class Imputer():
         matrix_imputed = torch.where(torch.isnan(
             self.matrix), matrix_pred.to("cpu"), self.matrix)
         matrix_imputed = pd.DataFrame(
-            matrix_imputed.detach().cpu().numpy(), columns=self.features_name)
-        matrix_imputed = matrix_imputed*self.std + self.mean
-        matrix_imputed[self.col_to_ignore] = self.df[self.col_to_ignore]
+            matrix_imputed.detach().cpu().numpy(), columns=self.features_name, index=self.df.index)
+        matrix_imputed = matrix_imputed*(self.max-self.min) + self.min
+    
 
         del self.matrix
         del self.train_matrix

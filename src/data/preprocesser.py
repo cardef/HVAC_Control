@@ -25,7 +25,7 @@ class Preprocesser():
         if self.scaling:
             self.mean = df_cleaned.mean(axis=0)
             self.std = df_cleaned.std(axis=0)
-            self.std.where(self.std != 0, 1, inplace=True)
+            self.std.where(self.std != 0, 1, inplace = True)
             df_cleaned = (df_cleaned-self.mean)/self.std
 
         if self.outliers:
@@ -42,14 +42,7 @@ class Preprocesser():
 
     def transform(self, df):
         df_cleaned = df.drop(self.col_const + self.col_to_ignore, axis=1)
-        na = df_cleaned.isna().any()
-        print(df.isna().sum().sum())
-        print(df.loc[:, df.isna().any()])
-        print(df_cleaned.loc[:, df_cleaned.isna().any()])
-        print(df.drop('date', axis=1).isna().sum().sum())
-
         df_cleaned = (df_cleaned-self.mean)/self.std
-
         if self.outliers:
             for i, col in enumerate(list(df_cleaned.columns)):
                 outliers = (df_cleaned[col] < self.lower_lim[i]) | (

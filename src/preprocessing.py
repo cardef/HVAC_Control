@@ -25,7 +25,8 @@ len_forecast = config['len_forecast']
 
 
 main_dir = Path(__file__).parent.parent
-path = main_dir/'data'/'lbnlbldg59'/'lbnlbldg59.processed' / 'LBNLBLDG59'/'clean_Bldg59_2018to2020'/'clean data'
+path = main_dir/'data'/'lbnlbldg59'/'lbnlbldg59.processed' / \
+    'LBNLBLDG59'/'clean_Bldg59_2018to2020'/'clean data'
 
 try:
     energy_df = pd.read_csv(path/'energy.csv')
@@ -44,18 +45,27 @@ except:
     cleaned_csv['energy']['features'].remove('mels_S')
     cleaned_csv['energy']['features'].remove('lig_S')
     cleaned_csv['energy']['features'].remove('mels_N')
+    cleaned_csv['energy']['features'].append('hvac')
     cleaned_csv['energy']['col_out'] = ['hvac']
     with open(main_dir/'cleaned_csv.json', 'w') as f:
         json.dump(cleaned_csv, f, indent=2)
 
-    energy_df.to_csv(path / 'energy.csv', index=False)
+    energy_df.to_csv(path / 'energy.csv',index_label='date')
 
+try:
+    energy_df.set_index('date', inplace=True, drop=True)
+except:
+    pass
+
+imputer = Imputer(energy_df, 250, 150, 1e-1, 1e-8)
+energy_df = imputer.impute()
+energy_df.to_csv(main_dir/'data'/'cleaned'/'energy/energy_imp.csv',index_label='date')
 
 energy_full_train_set, energy_test_set = split(energy_df)
 
 
-energy_preprocessor = Preprocesser(
-    ['date'], outliers=False, remove_col_const=False)
+
+energy_preprocessor = Preprocesser(outliers=False, remove_col_const=False)
 energy_preprocessor.fit(energy_full_train_set)
 energy_full_train_set = energy_preprocessor.transform(energy_full_train_set)
 
@@ -64,11 +74,15 @@ energy_test_set = energy_preprocessor.transform(energy_test_set)
 dump(energy_preprocessor, open(main_dir/'data'/'cleaned' /
      'preprocessor'/'energy_full_train_preprocessor.pkl', 'wb'))
 
+with open(main_dir/'cleaned_csv.json', 'r') as f:
+        cleaned_csv = json.load(f)
+cleaned_csv['energy']['normalisation'] = (energy_preprocessor.mean.tolist(), energy_preprocessor.std.tolist())
+with open(main_dir/'cleaned_csv.json', 'w') as f:
+    json.dump(cleaned_csv, f, indent=2)
 
 energy_train_set, energy_valid_set = split(
     energy_full_train_set, train_size=0.9)
-energy_preprocessor = Preprocesser(
-    ['date'], outliers=False, remove_col_const=False)
+energy_preprocessor = Preprocesser( outliers=False, remove_col_const=False)
 energy_preprocessor.fit(energy_train_set)
 energy_train_set = energy_preprocessor.transform(energy_train_set)
 
@@ -81,13 +95,13 @@ dump(energy_preprocessor, open(main_dir/'data'/'cleaned' /
 print('Prep completed')
 
 energy_train_set.to_csv(main_dir/'data'/'cleaned' /
-                        'energy'/'train_set_imp.csv', index=False)
+                        'energy'/'train_set_imp.csv',index_label='date')
 energy_valid_set.to_csv(main_dir/'data'/'cleaned' /
-                        'energy'/'valid_set_imp.csv', index=False)
+                        'energy'/'valid_set_imp.csv',index_label='date')
 energy_test_set.to_csv(main_dir/'data'/'cleaned' /
-                       'energy'/'test_set_imp.csv', index=False)
+                       'energy'/'test_set_imp.csv',index_label='date')
 energy_full_train_set.to_csv(
-    main_dir/'data'/'cleaned'/'energy'/'full_train_set_imp.csv', index=False)
+    main_dir/'data'/'cleaned'/'energy'/'full_train_set_imp.csv',index_label='date')
 
 try:
     temp_df = pd.read_csv(path/'temp.csv')
@@ -96,7 +110,7 @@ except:
     merger = Merger(path, ['outdoor', 'hvac_op', 'indoor'],
                     main_dir/'raw_csv.json', main_dir/'cleaned_csv.json', 'temp')
     temp_df = merger.merge()
-    temp_df.to_csv(path/'temp.csv', index=False)
+    temp_df.to_csv(path/'temp.csv',index_label='date')
 
     with open(main_dir/'cleaned_csv.json', 'r') as f:
         cleaned_csv = json.load(f)
@@ -106,21 +120,34 @@ except:
     with open(main_dir/'cleaned_csv.json', 'w') as f:
         json.dump(cleaned_csv, f, indent=2)
 
+try:
+    temp_df.set_index('date', inplace=True)
+except:
+    pass
+
+imputer = Imputer(temp_df,250, 150, 1e-1, 1e-8)
+temp_df = imputer.impute()
+temp_df.to_csv(main_dir/'data'/'cleaned'/'temp/temp_imp.csv',index_label='date')
+
 
 temp_full_train_set, temp_test_set = split(temp_df)
 
-temp_preprocessor = Preprocesser(
-    ['date'], outliers=False, remove_col_const=False)
+temp_preprocessor = Preprocesser( outliers=False, remove_col_const=False)
 temp_preprocessor.fit(temp_full_train_set)
 temp_full_train_set = temp_preprocessor.transform(temp_full_train_set)
 temp_test_set = temp_preprocessor.transform(temp_test_set)
+
 dump(temp_preprocessor, open(main_dir/'data'/'cleaned' /
      'preprocessor'/'temp_full_train_preprocessor.pkl', 'wb'))
 
+with open(main_dir/'cleaned_csv.json', 'r') as f:
+        cleaned_csv = json.load(f)
+cleaned_csv['temp']['normalisation'] = (temp_preprocessor.mean.tolist(), temp_preprocessor.std.tolist())
+with open(main_dir/'cleaned_csv.json', 'w') as f:
+    json.dump(cleaned_csv, f, indent=2)
 
 temp_train_set, temp_valid_set = split(temp_full_train_set, train_size=0.9)
-temp_preprocessor = Preprocesser(
-    ['date'], outliers=False, remove_col_const=False)
+temp_preprocessor = Preprocesser( outliers=False, remove_col_const=False)
 temp_preprocessor.fit(temp_train_set)
 temp_train_set = temp_preprocessor.transform(temp_train_set)
 temp_valid_set = temp_preprocessor.transform(temp_valid_set)
@@ -128,10 +155,10 @@ dump(temp_preprocessor, open(main_dir/'data'/'cleaned' /
      'preprocessor'/'temp_train_preprocessor.pkl', 'wb'))
 
 temp_train_set.to_csv(main_dir/'data'/'cleaned'/'temp' /
-                      'train_set_imp.csv', index=False)
+                      'train_set_imp.csv',index_label='date')
 temp_valid_set.to_csv(main_dir/'data'/'cleaned'/'temp' /
-                      'valid_set_imp.csv', index=False)
+                      'valid_set_imp.csv',index_label='date')
 temp_test_set.to_csv(main_dir/'data'/'cleaned'/'temp' /
-                     'test_set_imp.csv', index=False)
+                     'test_set_imp.csv',index_label='date')
 temp_full_train_set.to_csv(
-    main_dir/'data'/'cleaned'/'temp'/'full_train_set_imp.csv', index=False)
+    main_dir/'data'/'cleaned'/'temp'/'full_train_set_imp.csv',index_label='date')

@@ -5,9 +5,15 @@ import pandas as pd
 from pathlib import Path
 MAIN_DIR = Path(__file__).parent.parent
 
-with open("config.json") as f:
+with open('config.json') as f:
     config = json.load(f)
-    col_out = config['PARAMETER']['DATA']['col_temp_in'] + config['PARAMETER']['DATA']['col_temp_ext'] 
+
+with open("cleaned_csv.json") as f:
+    cleaned_csv = json.load(f)
+len_forecast = config['len_forecast']
+time_window = config['time_window']
+col_out_temp = cleaned_csv['temp']['col_out']
+
 app = Dash(__name__)
 
 en_res = pd.read_csv(MAIN_DIR/'results'/'outputs'/'energy_prediction.csv', header = [0,1], index_col=[0])
@@ -24,8 +30,8 @@ app.layout = html.Div(children = [
         html.P("Select zone:"),
         dcc.Dropdown(
             id="ticker",
-            options=col_out,
-            value=col_out[0],
+            options=col_out_temp,
+            value=col_out_temp[0],
             clearable=False,
         ),
     ]),

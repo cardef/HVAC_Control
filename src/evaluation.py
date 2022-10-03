@@ -18,15 +18,17 @@ with open("cleaned_csv.json") as f:
 len_forecast = config['len_forecast']
 time_window = config['time_window']
 col_out_temp = cleaned_csv['temp']['col_out']
+energy_max, energy_min = cleaned_csv['energy']['normalisation']
+hvac_index = cleaned_csv['energy']['features'].index('hvac')
 
 energy_test_set =pd.read_csv(MAIN_DIR/'data'/'cleaned'/'energy'/'test_set_imp.csv')
-energy_test_loader = DataLoader(Dataset(energy_test_set, time_window, len_forecast, ['hvac']), batch_size = 64, collate_fn = collate_fn, num_workers = 14)
+energy_test_loader = DataLoader(Dataset(energy_test_set, time_window, len_forecast, 'energy'), batch_size = 64, collate_fn = collate_fn, num_workers = 14)
 forecaster_energy = CNNEncDecAttn.load_from_checkpoint(MAIN_DIR/'results'/'models'/'forecaster_energy.ckpt')
 energy_evaluator = Evaluator(energy_test_loader, forecaster_energy, ['hvac'])
-energy_res = energy_evaluator.evaluation() 
-
+energy_res = energy_evaluator.evaluation()
+print(energy_min[hvac_index], energy_max[hvac_index] )
 temp_test_set =pd.read_csv(MAIN_DIR/'data'/'cleaned'/'temp'/'test_set_imp.csv')
-temp_test_loader = DataLoader(Dataset(temp_test_set, time_window, len_forecast, col_out_temp), batch_size = 64, collate_fn = collate_fn, num_workers = 14)
+temp_test_loader = DataLoader(Dataset(temp_test_set, time_window, len_forecast, 'temp'), batch_size = 64, collate_fn = collate_fn, num_workers = 14)
 forecaster_temp = CNNEncDecAttn.load_from_checkpoint(MAIN_DIR/'results'/'models'/'forecaster_temp.ckpt')
 temp_evaluator = Evaluator(temp_test_loader, forecaster_temp, col_out_temp)
 temp_res = temp_evaluator.evaluation()

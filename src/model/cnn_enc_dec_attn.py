@@ -5,7 +5,7 @@ import pytorch_lightning as pl
 
 class CNNEncDecAttn(pl.LightningModule):
     
-    def __init__(self, config, scheduler_patience = 5,conv_layers = [(32, 3, 1, 1)], linear_layers = [500,10]):
+    def __init__(self, config, scheduler_patience = 10,conv_layers = [(32, 3, 1, 1)], linear_layers = [500,10]):
         super(CNNEncDecAttn, self).__init__()
         self.hidden_size_enc = int(config['hidden_size_enc'])
         self.len_forecast = config['len_forecast']
@@ -17,7 +17,7 @@ class CNNEncDecAttn(pl.LightningModule):
         self.dropout_conv = nn.Dropout(self.p_dropout_conv)
         self.encoder = encoder.Encoder(int(config['conv_features']), self.hidden_size_enc, 1)
         self.decoder = attndecoder.AttnDecoder(self.hidden_size_enc, self.hidden_size_enc)
-        self.fcc = fcc.FCC([config['linear_layer1'], config['linear_layer2'], config['linear_layer3'], config['linear_layer4'], config['linear_layer5']], self.p_dropout_fc)
+        self.fcc = fcc.FCC([config['linear_layer1'], config['linear_layer2'], config['linear_layer3']], self.p_dropout_fc)
         self.output = nn.LazyLinear(self.col_out)
         self.scheduler_patience = scheduler_patience
         self.save_hyperparameters()
@@ -39,21 +39,21 @@ class CNNEncDecAttn(pl.LightningModule):
     def training_step(self, batch, batch_idx):
         X, Y, _, _ = batch
         pred = self.forward(X)
-        train_loss = nn.MSELoss()(pred, Y)
+        train_loss = nn.L1Loss()(pred, Y)
         self.log("train_loss", train_loss, prog_bar=True, on_epoch=True)
         return train_loss
     
     def validation_step(self, batch, batch_idx):
         X, Y, _, _ = batch
         pred = self.forward(X)
-        val_loss = nn.MSELoss()(pred, Y)
+        val_loss = nn.L1Loss()(pred, Y)
         self.log("val_loss", val_loss, prog_bar=True, on_epoch=True)
         return val_loss
 
     def test_step(self, batch, batch_idx):
         X, Y, _, _ = batch
         pred = self.forward(X)
-        test_loss = nn.MSELoss()(pred, Y)
+        test_loss = nn.L1Loss()(pred, Y)
         self.log("test_loss", test_loss, prog_bar=True, on_epoch=True)
         return test_loss
     
@@ -66,6 +66,6 @@ class CNNEncDecAttn(pl.LightningModule):
         return pred, truth, timestamp_y
         
     def configure_optimizers(self):
-        optimizer = torch.optim.Adam(self.parameters(), lr=self.lr)
+        optimizer = torch.optim.AdamW(self.parameters(), lr=self.lr)
         scheduler = torch.optim.lr_scheduler.ReduceLROnPlateau(optimizer=optimizer, patience= self.scheduler_patience, factor=0.5)
         return {'optimizer' : optimizer, 'lr_scheduler' : {'scheduler': scheduler, 'monitor':'val_loss'}}

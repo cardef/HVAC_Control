@@ -20,5 +20,5 @@ class MatrixFactorization(torch.nn.Module):
         cols = torch.arange(matrix.size(1)).to(self.device)
         
         pred = torch.matmul(self.rows_factors(rows) + self.user_biases(rows), (self.cols_factors(cols) + self.item_biases(cols)).transpose(1,0) )
-
+        pred=torch.sigmoid(pred)
         return pred

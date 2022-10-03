@@ -1,6 +1,7 @@
 import numpy as np
 import pandas as pd
 from pathlib import Path
+import json
 
 MAIN_DIR = Path(__file__).parent.parent
 
@@ -26,15 +27,17 @@ def imputation(df, imputer, fit = False):
 
 def split(df, train_size = 0.8):
     train_indices = np.ceil(len(df)*train_size).astype(int)
-    train_set = df[:train_indices].reset_index(drop = True)
-    test_set = df[train_indices:].reset_index(drop = True)
+    train_set = df[:train_indices]
+    test_set = df[train_indices:]
 
     return train_set, test_set
 
-def col_out_to_index(df, col_out):
+def col_out_to_index(key):
     col_out_in = {}
-    for i, col in enumerate(col_out):
-        in_x = df.columns.get_loc(col)
+    with open(MAIN_DIR/"cleaned_csv.json", "r") as f:
+        cleaned_csv = json.load(f)
+    for i, col in enumerate(cleaned_csv[key]['col_out']):
+        in_x = cleaned_csv[key]['features'].index(col)
         col_out_in[col] = (in_x, i)
 
     return col_out_in
