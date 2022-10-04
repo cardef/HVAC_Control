@@ -24,6 +24,8 @@ class CNNEncDecAttn(pl.LightningModule):
         self.save_hyperparameters()
 
     def forward(self, x):
+        if x.dim() == 2:
+            x.unsqueeze(0)
         x = self.conv1d(x)
         x = self.dropout_conv(x)
         x, h = self.encoder(x.transpose(1,2))
