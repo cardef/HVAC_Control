@@ -6,6 +6,8 @@
         "site_weather.csv"
     ],
     "hvac_op": [
+        "zone_temp_sp_c.csv",
+        "zone_temp_sp_h.csv",
         "hp_hws_temp.csv",
         "rtu_sa_t_sp.csv",
         "rtu_sa_t.csv",
@@ -22,9 +24,7 @@
         "uft_hw_valve.csv"
     ],
     "indoor": [
-        "zone_temp_sp_c.csv",
-        "zone_temp_sp_h.csv",
-        "zone_temp_interior.csv",
+        "zone_temp_interior_celsius.csv",
         "zone_temp_exterior.csv"
     ]
 }

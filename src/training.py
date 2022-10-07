@@ -18,10 +18,10 @@ len_forecast = config['len_forecast']
 time_window = config['time_window']
 col_out_temp = cleaned_csv['temp']['col_out']
 
-with open(MAIN_DIR/'tuning'/'temp'/'cnn_lstm'/'best_results.pkl', 'rb') as f:
+with open(MAIN_DIR/'tuning'/'cnn_lstm'/'temp'/'best_results.pkl', 'rb') as f:
     temp_results = load(f)
 
-with open(MAIN_DIR/'tuning'/'energy'/'cnn_lstm'/'best_results.pkl', 'rb') as f:
+with open(MAIN_DIR/'tuning'/'cnn_lstm'/'energy'/'best_results.pkl', 'rb') as f:
     energy_results = load(f)
 
 
@@ -42,13 +42,13 @@ energy_results.config['col_out'] = 1
 
 
 forecaster_temp = CNNEncDecAttn(temp_results.config)
-trainer = Trainer(accelerator='auto',  auto_lr_find=False, max_epochs=100)
-#trainer.fit(forecaster_temp, temp_full_train_loader, temp_test_loader)
-#trainer.save_checkpoint(MAIN_DIR/'results'/'models'/'forecaster_temp.ckpt')
+trainer = Trainer(accelerator='auto',  auto_lr_find=False, max_epochs=50)
+trainer.fit(forecaster_temp, temp_full_train_loader, temp_test_loader)
+trainer.save_checkpoint(MAIN_DIR/'results'/'models'/'forecaster_temp.ckpt')
 
 
 
 forecaster_energy = CNNEncDecAttn(energy_results.config)
-trainer = Trainer(accelerator='auto',  auto_lr_find=False, max_epochs=10)
+trainer = Trainer(accelerator='auto',  auto_lr_find=False, max_epochs=50)
 trainer.fit(forecaster_energy, energy_full_train_loader, energy_test_loader)
 trainer.save_checkpoint(MAIN_DIR/'results'/'models'/'forecaster_energy.ckpt')

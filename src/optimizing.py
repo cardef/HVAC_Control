@@ -14,25 +14,144 @@ from pythermalcomfort.utilities import v_relative, clo_dynamic
 from pythermalcomfort.utilities import met_typical_tasks
 from statistics import mean
 from tqdm import tqdm
+from pythermalcomfort.optimized_functions import pmv_ppd_optimized
 from torchviz import make_dot, make_dot_from_trace
+import math
 
+def pmv_ppd_optimized(tdb, tr, vr, rh, met, clo, wme):
 
-def loss_fn(energy, temp):
-    '''
-    activity = "Seated, quiet"
-    met = met_typical_tasks[activity]  #metabolic rate associated to the activity
+    pa = rh * 10 * torch.exp(16.6536 - 4030.183 / (tdb + 235))
 
-    vr = v_relative(v=0.1, met=met) #relative air velocity considering the activity
-    clo = clo_tout(15) #clothing level given outdoor temp
+    icl = 0.155 * clo  # thermal insulation of the clothing in M2K/W
+    m = met * 58.15  # metabolic rate in W/M2
+    w = wme * 58.15  # external work in W/M2
+    mw = m - w  # internal heat production in the human body
+    # calculation of the clothing area factor
+    if icl <= 0.078:
+        f_cl = 1 + (1.29 * icl)  # ratio of surface clothed body over nude body
+    else:
+        f_cl = 1.05 + (0.645 * icl)
 
-    results = pmv_ppd(tdb=temp, tr=temp, vr=vr, rh=50, met=met, clo=clo, standard="ISO")
-    print(results)
+    # heat transfer coefficient by forced convection
+    hcf = 12.1 * torch.sqrt(vr)
+    hc = hcf  # initialize variable
+    taa = tdb + 273
+    tra = tr + 273
+    t_cla = taa + (35.5 - tdb) / (3.5 * icl + 0.1)
 
-    ppd = results['ppd']
-    '''
-    loss = torch.sum(energy) + 100*torch.sum(temp-0.3) + \
-        100*torch.sum(temp+0.3)
+    p1 = icl * f_cl
+    p2 = p1 * 3.96
+    p3 = p1 * 100
+    p4 = p1 * taa
+    p5 = (308.7 - 0.028 * mw) + (p2 * (tra / 100.0) ** 4)
+    xn = t_cla / 100
+    xf = t_cla / 50
+    eps = 0.00015
+
+    n = 0
+    
+    mask = ((xn-xf) > eps).clone().detach()
+    #print(mask.shape, xf.shape, xn.shape, eps.shape)
+    while mask.sum() > 0:
+        xf = torch.where(mask,(xf + xn) / 2, xf)
+        hcn = 2.38 * abs(100.0 * xf - taa) ** 0.25
+        hc = torch.where(hcf > hcn, hcf, hcn)
+        xf = torch.where(mask, (p5 + p4 * hc - p2 * torch.pow(xf,4)) / (100 + p3 * hc), xn)
+        mask = ((xn-xf) < eps).clone().detach()
+        n += 1
+        if n > 150:
+            break
+        '''
+        while abs(xn - xf) > eps:
+            xf = (xf + xn) / 2
+            hcn = 2.38 * abs(100.0 * xf - taa) ** 0.25
+            if hcf > hcn:
+                hc = hcf
+            else:
+                hc = hcn
+            xn = (p5 + p4 * hc - p2 * xf ** 4) / (100 + p3 * hc)
+            n += 1
+            if n > 150:
+                raise StopIteration("Max iterations exceeded")
+        '''
+    tcl = 100 * xn - 273
+
+    # heat loss diff. through skin
+    hl1 = 3.05 * 0.001 * (5733 - (6.99 * mw) - pa)
+    # heat loss by sweating
+    if mw > 58.15:
+        hl2 = 0.42 * (mw - 58.15)
+    else:
+        hl2 = 0
+    # latent respiration heat loss
+    hl3 = 1.7 * 0.00001 * m * (5867 - pa)
+    # dry respiration heat loss
+    hl4 = 0.0014 * m * (34 - tdb)
+    # heat loss by radiation
+    hl5 = 3.96 * f_cl * (xn ** 4 - (tra / 100.0) ** 4)
+    # heat loss by convection
+    hl6 = f_cl * hc * (tcl - tdb)
+
+    ts = 0.303 * math.exp(-0.036 * m) + 0.028
+    _pmv = ts * (mw - hl1 - hl2 - hl3 - hl4 - hl5 - hl6)
+
+    return _pmv
+
+def loss_fn(energy, temp, vr=torch.Tensor([0.1]), rh=torch.Tensor([50]), met=torch.Tensor([1]), clo=torch.Tensor([0.6]), wme=torch.Tensor([0])):
+   
+    vr = vr.to(device)
+    rh = rh.to(device)
+    met = met.to(device)
+    clo = clo.to(device)
+    wme = wme.to(device)
+    
+
+    # if v_r is higher than 0.1 follow methodology ASHRAE Appendix H, H3
+    ce = 0.0
+    
+    temp
+
+    temp = temp.clone() - ce
+    #vr = np.where(ce > 0, 0.1, vr)
+
+    pmv_array = pmv_ppd_optimized(temp, temp, vr, rh, met, clo, wme)
+
+    ppd_array = 100.0 - 95.0 * torch.exp(
+        -0.03353 * torch.pow(pmv_array, 4.0) - 0.2179 * torch.pow(pmv_array, 2.0)
+    )
+
+    
+
+    
+    loss = torch.sum(energy) + 1*torch.sum(torch.pow(ppd_array,2)-100)
+        
+    print(loss, ppd_array)
     return loss
+
+
+def get_predictions(energy_historical, temp_historical, outdoor_pred, hvac_op, forecaster_energy, forecaster_temp):
+    energy_historical  = energy_historical.to(device)
+    temp_historical  = temp_historical.to(device)
+    
+    energy_first_pred = forecaster_energy(energy_historical[-time_window:].to(
+        device)).squeeze(0).transpose(0, 1)
+    temp_first_pred = forecaster_temp(temp_historical[-time_window:].to(
+        device)).squeeze(0).transpose(0, 1)
+    energy_input = torch.cat((outdoor_pred.transpose(0, 1), hvac_op[:len(
+        hvac_op)-82], energy_first_pred), dim=0)
+    print(energy_input.shape, energy_historical.shape, energy_first_pred.shape, temp_first_pred.shape)
+    energy_opt = torch.cat(
+        (energy_input, energy_historical.transpose(0, 1)), dim=1)
+    outdoor_pred.requires_grad_(False)
+
+    temp_input = torch.cat((outdoor_pred.transpose(
+        0, 1), hvac_op, temp_first_pred), dim=0)
+    temp_opt = torch.cat((temp_input, temp_historical.transpose(0, 1)), dim=1)
+
+    energy_pred = forecaster_energy(energy_opt[-time_window:].to(device))
+    temp_pred = forecaster_temp(temp_opt[-time_window:].to(device))
+    
+    return energy_pred, temp_pred, energy_opt, temp_opt
 
 
 device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
@@ -47,7 +166,6 @@ col_out_temp = cleaned_csv['temp']['col_out']
 col_out_energy = cleaned_csv['energy']['col_out']
 features_temp = cleaned_csv['temp']['features']
 features_energy = cleaned_csv['energy']['features']
-print(len(features_energy), len(features_temp), len(col_out_temp))
 hvac_not_in_en = [a for a in features_temp if (
     a not in features_energy) & (a not in col_out_temp)]
 
@@ -66,17 +184,9 @@ temp_test_set = pd.read_csv(
 energy_test_set.set_index('date', inplace=True)
 temp_test_set.set_index('date', inplace=True)
 outdoor = energy_test_set.iloc[time_window:, :5]
+energy_opt = torch.Tensor(energy_test_set[-time_window:].values)
+temp_opt = torch.Tensor(temp_test_set[-time_window:].values)
 
-temp_test = torch.Tensor(temp_test_set[:time_window].values).to(device)
-energy_test = torch.Tensor(energy_test_set[:time_window].values).to(device)
-temp_test.requires_grad_(False)
-energy_test.requires_grad_(False)
-energy_first_pred = forecaster_energy(energy_test.to(
-    device).unsqueeze(0)).squeeze(0).transpose(0, 1)
-temp_first_pred = forecaster_temp(temp_test.to(
-    device).unsqueeze(0)).squeeze(0).transpose(0, 1)
-temp_first_pred.detach()
-energy_first_pred.detach()
 for i in range(720):
 
     hvac_op = torch.normal(torch.zeros(
@@ -85,30 +195,12 @@ for i in range(720):
 
     optimizer = torch.optim.Adam([hvac_op])
     loss_epochs = []
+    outdoor_pred = torch.Tensor(outdoor[i*len_forecast:(i+1)*len_forecast].values).to(device)
     for epoch in tqdm(range(100)):
-
+        
         optimizer.zero_grad()
-        '''
-        outdoor_pred = torch.Tensor(outdoor[i*len_forecast:(i+1)*len_forecast].values).to(device)
-        outdoor_pred.requires_grad_(False)
-        energy_input = torch.cat((outdoor_pred.transpose(0,1), hvac_op[:len(hvac_op)-len(hvac_not_in_en)], energy_first_pred), dim = 0)
-        energy_opt_test = torch.cat((energy_input, energy_test.transpose(0,1)), dim = 1)
-        outdoor_pred.requires_grad_(False)
-        
-
-        temp_input = torch.cat((outdoor_pred.transpose(0,1), hvac_op, temp_first_pred), dim = 0)
-        temp_opt_test = torch.cat((temp_input, temp_test.transpose(0,1)), dim = 1)
-        
-        
-        '''
-        energy_pred = forecaster_energy(
-            torch.cat((torch.cat((torch.Tensor(outdoor[i*len_forecast:(i+1)*len_forecast].values).to(device), hvac_op[:len(hvac_op)-len(hvac_not_in_en)], forecaster_energy(
-                energy_test.to(device)).squeeze(0)), dim=0), energy_test), dim=1)[:, i*len_forecast:time_window+i*len_forecast].to(device)).squeeze(0)
-        temp_pred = forecaster_temp(torch.cat((torch.cat((torch.Tensor(outdoor[i*len_forecast:(i+1)*len_forecast].values).to(device), hvac_op, forecaster_temp(temp_test.to(device)).squeeze(0)), dim=0), temp_test), dim=1)[:, i*len_forecast:time_window+i*len_forecast].to(device)).squeeze(0)
+        energy_pred, temp_pred, energy_opt, temp_opt = get_predictions(energy_opt, temp_opt, outdoor_pred, hvac_op, forecaster_energy, forecaster_temp)
         loss = loss_fn(energy_pred, temp_pred)
-
-        temp_test.requires_grad_(False)
-        energy_test.requires_grad_(False)
         loss.backward(retain_graph=False)
 
         loss_epochs.append(loss.item())

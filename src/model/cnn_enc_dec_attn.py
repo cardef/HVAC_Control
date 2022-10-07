@@ -5,15 +5,15 @@ import pytorch_lightning as pl
 
 class CNNEncDecAttn(pl.LightningModule):
     
-    def __init__(self, config, scheduler_patience = 10,conv_layers = [(32, 3, 1, 1)], linear_layers = [500,10]):
+    def __init__(self, len_forecast, col_out, config, bidirectional = False, scheduler_patience = 5):
         super(CNNEncDecAttn, self).__init__()
         self.hidden_size_enc = int(config['hidden_size_enc'])
-        self.len_forecast = config['len_forecast']
-        self.col_out = config['col_out']
+        self.len_forecast = len_forecast
+        self.col_out = col_out
         self.lr = config['lr']
+        self.bidirectional = bidirectional
         self.p_dropout_conv = config['p_dropout_conv']
         self.p_dropout_fc = config['p_dropout_fc']
-        print(config["conv_layers"])
         self.conv1d = conv1d.Conv1d(zip(config['conv_features'], config['conv_kernels']))
         self.dropout_conv = nn.Dropout(self.p_dropout_conv)
         self.encoder = encoder.Encoder(config['conv_features'][-1], self.hidden_size_enc, 1)
@@ -25,7 +25,8 @@ class CNNEncDecAttn(pl.LightningModule):
 
     def forward(self, x):
         if x.dim() == 2:
-            x.unsqueeze(0)
+            x =x.unsqueeze(0)
+        x = x.transpose(1,2)
         x = self.conv1d(x)
         x = self.dropout_conv(x)
         x, h = self.encoder(x.transpose(1,2))
@@ -72,3 +73,4 @@ class CNNEncDecAttn(pl.LightningModule):
         optimizer = torch.optim.AdamW(self.parameters(), lr=self.lr)
         scheduler = torch.optim.lr_scheduler.ReduceLROnPlateau(optimizer=optimizer, patience= self.scheduler_patience, factor=0.5)
         return {'optimizer' : optimizer, 'lr_scheduler' : {'scheduler': scheduler, 'monitor':'val_loss'}}
+        #return {'optimizer': optimizer}
