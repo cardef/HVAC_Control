@@ -36,19 +36,19 @@ energy_test_set = pd.read_csv(MAIN_DIR/'data'/'cleaned'/'energy'/'test_set_imp.c
 energy_full_train_loader = DataLoader(Dataset(energy_full_train_set, time_window, len_forecast, "energy"), batch_size = 64, collate_fn = collate_fn, num_workers = 24)
 energy_test_loader = DataLoader(Dataset(energy_test_set, time_window, len_forecast, "energy"), batch_size = 64, collate_fn = collate_fn, num_workers = 24)
 
-energy_results.config['col_out'] = 1
 
 
 
 
-forecaster_temp = CNNEncDecAttn(temp_results.config)
+
+forecaster_temp = CNNEncDecAttn(len_forecast, len(col_out_temp), temp_results.config)
 trainer = Trainer(accelerator='auto',  auto_lr_find=False, max_epochs=50)
 trainer.fit(forecaster_temp, temp_full_train_loader, temp_test_loader)
 trainer.save_checkpoint(MAIN_DIR/'results'/'models'/'forecaster_temp.ckpt')
 
 
 
-forecaster_energy = CNNEncDecAttn(energy_results.config)
+forecaster_energy = CNNEncDecAttn(len_forecast, 1, energy_results.config)
 trainer = Trainer(accelerator='auto',  auto_lr_find=False, max_epochs=50)
 trainer.fit(forecaster_energy, energy_full_train_loader, energy_test_loader)
 trainer.save_checkpoint(MAIN_DIR/'results'/'models'/'forecaster_energy.ckpt')
