@@ -9,15 +9,15 @@ from utils import MAIN_DIR, col_out_to_index
 import json
 from torch.utils.data import Dataset, DataLoader
 from data.dataset import collate_fn
-from pythermalcomfort.models import pmv_ppd, clo_tout
-from pythermalcomfort.utilities import v_relative, clo_dynamic
-from pythermalcomfort.utilities import met_typical_tasks
+#from pythermalcomfort.models import pmv_ppd, clo_tout
+#from pythermalcomfort.utilities import v_relative, clo_dynamic
+#from pythermalcomfort.utilities import met_typical_tasks
 from statistics import mean
 from tqdm import tqdm
-from pythermalcomfort.optimized_functions import pmv_ppd_optimized
-from torchviz import make_dot, make_dot_from_trace
+#from pythermalcomfort.optimized_functions import pmv_ppd_optimized
+#from torchviz import make_dot, make_dot_from_trace
 import math
-from torchviz import make_dot, make_dot_from_trace
+#from torchviz import make_dot, make_dot_from_trace
 
 def pmv_ppd_optimized(tdb, tr, vr, rh, met, clo, wme):
 
@@ -51,14 +51,14 @@ def pmv_ppd_optimized(tdb, tr, vr, rh, met, clo, wme):
 
     n = 0
     
-    mask = ((xn-xf) > eps).clone().detach()
+    mask = (torch.abs(xn-xf) > eps).clone().detach()
     #print(mask.shape, xf.shape, xn.shape, eps.shape)
     while mask.sum() > 0:
         xf = torch.where(mask,(xf + xn) / 2, xf)
         hcn = 2.38 * abs(100.0 * xf - taa) ** 0.25
         hc = torch.where(hcf > hcn, hcf, hcn)
-        xf = torch.where(mask, (p5 + p4 * hc - p2 * torch.pow(xf,4)) / (100 + p3 * hc), xn)
-        mask = ((xn-xf) < eps).clone().detach()
+        xn = torch.where(mask, (p5 + p4 * hc - p2 * torch.pow(xf,4)) / (100 + p3 * hc), xn)
+        mask = (torch.abs(xn-xf) > eps).clone().detach()
         n += 1
         if n > 150:
             break
@@ -99,7 +99,8 @@ def pmv_ppd_optimized(tdb, tr, vr, rh, met, clo, wme):
     return _pmv
 
 def loss_fn(energy, temp, vr=torch.Tensor([0.1]), rh=torch.Tensor([50]), met=torch.Tensor([1]), clo=torch.Tensor([0.6]), wme=torch.Tensor([0])):
-   
+    
+    temp = torch.where(temp < 0, temp * 9/5 + 32, (temp - 32) * 5/9)
     vr = vr.to(device)
     rh = rh.to(device)
     met = met.to(device)
@@ -122,38 +123,40 @@ def loss_fn(energy, temp, vr=torch.Tensor([0.1]), rh=torch.Tensor([50]), met=tor
     )
 
     
-
+    print(temp[0][0], ppd_array[0][0])
+    loss = torch.sum(energy) + 1*torch.sum(torch.pow(ppd_array,2)-100)
     
-    loss2 = torch.sum(energy) + 1*torch.sum(torch.pow(ppd_array,2)-100)
-    loss = torch.sum(energy)
     return loss
 
 
 def get_predictions(energy_historical, temp_historical, outdoor_pred, hvac_op, forecaster_energy, forecaster_temp):
     energy_historical  = energy_historical.to(device)
     temp_historical  = temp_historical.to(device)
-    hvac_op.retain_graph = True
-    hvac_op.requires_grad_=True
+    
     energy_first_pred = forecaster_energy(energy_historical[-time_window:].to(
-        device)).squeeze(0).transpose(0, 1).detach()
+        device)).squeeze(0).detach()
     temp_first_pred = forecaster_temp(temp_historical[-time_window:].to(
-        device)).squeeze(0).transpose(0, 1).detach()
+        device)).squeeze(0).detach()
    
-    energy_input = torch.cat((outdoor_pred.transpose(0, 1), hvac_op[:len(
-        hvac_op)], energy_first_pred), dim=0)
+    energy_input = torch.cat((outdoor_pred, hvac_op, energy_first_pred), dim=1)
     
     energy_opt = torch.cat(
-        (energy_input.transpose(0, 1), energy_historical), dim=0)
+        (energy_historical, energy_input), dim=0)
     outdoor_pred.requires_grad_(True)
 
-    temp_input = torch.cat((outdoor_pred.transpose(
-        0, 1), hvac_op, temp_first_pred), dim=0)
-    temp_opt = torch.cat((temp_input.transpose(0, 1), temp_historical), dim=0)
+    temp_input = torch.cat((outdoor_pred, hvac_op, temp_first_pred), dim=1)
+    temp_opt = torch.cat((temp_historical, temp_input), dim=0)
     
+    '''
     energy_pred = forecaster_energy(torch.cat(
         (torch.cat((outdoor_pred.transpose(0, 1), hvac_op, energy_first_pred), dim=0).transpose(0, 1), energy_historical), dim=0)[-time_window:].to(device))
     temp_pred = forecaster_temp(torch.cat((torch.cat((outdoor_pred.transpose(
         0, 1), hvac_op, temp_first_pred), dim=0).transpose(0, 1), temp_historical), dim=0)[-time_window:].to(device))
+    '''
+    
+    energy_pred = forecaster_energy(energy_opt).squeeze()
+    temp_pred = forecaster_temp(temp_opt).squeeze()
+    
     energy_pred.requires_grad_(True)
     energy_pred.retain_grad()
     energy_opt.requires_grad_(True)
@@ -174,8 +177,9 @@ col_out_temp = cleaned_csv['temp']['col_out']
 col_out_energy = cleaned_csv['energy']['col_out']
 features_temp = cleaned_csv['temp']['features']
 features_energy = cleaned_csv['energy']['features']
-
-
+hvac_index = cleaned_csv['energy']['features'].index('hvac')
+col_out_temp_index = [cleaned_csv['temp']['features'].index(col) for col in col_out_temp]
+temp_norm = [[cleaned_csv['temp']['normalisation'][0][col] for col in col_out_temp_index],[cleaned_csv['temp']['normalisation'][1][col] for col in col_out_temp_index]]
 forecaster_energy = CNNEncDecAttn.load_from_checkpoint(
     MAIN_DIR/'results'/'models'/'forecaster_energy.ckpt').to(device)
 
@@ -196,35 +200,28 @@ energy_opt.requires_grad_(True)
 energy_opt.retain_grad()
 temp_opt = torch.Tensor(temp_test_set[-time_window:].values)
 
-for i in range(720):
 
-    hvac_op = torch.normal(torch.zeros(
-        len(features_temp)-len(col_out_temp)-5, len_forecast), 0).to(device)
-    hvac_op.requires_grad_(True)
+hvac_op = torch.normal(torch.zeros(len_forecast,
+    len(features_temp)-len(col_out_temp)-5), 0.1).to(device)
+hvac_op.requires_grad_(True)
 
-    optimizer = torch.optim.Adam([hvac_op])
-    loss_epochs = []
-    outdoor_pred = torch.Tensor(outdoor[i*len_forecast:(i+1)*len_forecast].values).to(device).detach()
-    outdoor_pred.requires_grad_(True)
-    for epoch in tqdm(range(100)):
-        torch.autograd.set_detect_anomaly(True)
-        optimizer.zero_grad()
-        
-        
-        energy_pred, temp_pred, energy_opt2, temp_opt2 = get_predictions(energy_opt, temp_opt, outdoor_pred, hvac_op, forecaster_energy, forecaster_temp)
+optimizer = torch.optim.Adam([hvac_op], lr=1000)
+loss_epochs = []
+outdoor_pred = torch.Tensor(outdoor[0*len_forecast:(0+1)*len_forecast].values).to(device).detach()
+outdoor_pred.requires_grad_(True)
+for epoch in tqdm(range(10)):
+    torch.autograd.set_detect_anomaly(True)
+    optimizer.zero_grad()
+    
+    
+    energy_pred, temp_pred, energy_opt, temp_opt = get_predictions(energy_opt, temp_opt, outdoor_pred, hvac_op, forecaster_energy, forecaster_temp)
 
-        loss = loss_fn(energy_pred, temp_pred)
-        
-        energy_first_pred = forecaster_energy(energy_opt[-time_window:].to(
-        device)).squeeze(0).transpose(0, 1)
-        torch.sum(forecaster_energy(torch.cat(
-        (torch.cat((outdoor_pred.transpose(0, 1), hvac_op, energy_first_pred), dim=0).transpose(0, 1), energy_opt), dim=0)[-time_window:].to(device))).backward(retain_graph=True)
-        print(energy_opt.grad)
-        print(outdoor_pred.grad)
-        print(torch.sum(hvac_op.grad))
-        loss_epochs.append(loss.item())
-        g = make_dot(loss, params={"hvac_op": hvac_op})
-        optimizer.step()
-        print(loss)
-        
-    print(mean(loss_epochs))
+    loss = loss_fn(energy_pred, temp_pred*(torch.Tensor(temp_norm[1]))+torch.Tensor(temp_norm[0]))
+    loss.backward()
+    
+    loss_epochs.append(loss.item())
+    #g = make_dot(loss, params={"hvac_op": hvac_op})
+    optimizer.step()
+    print(loss)
+    
+print(mean(loss_epochs))

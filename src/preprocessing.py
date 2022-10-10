@@ -28,10 +28,10 @@ main_dir = Path(__file__).parent.parent
 path = main_dir/'data'/'lbnlbldg59'/'lbnlbldg59.processed' / \
     'LBNLBLDG59'/'clean_Bldg59_2018to2020'/'clean data'
 
-zone_temp_interior = pd.read_csv(path/'zone_temp_interior.csv')
-zone_temp_interior_celsius = (zone_temp_interior.drop('date', axis = 1) -32) * 5/9
-zone_temp_interior_celsius['date'] = zone_temp_interior['date']
-zone_temp_interior_celsius.to_csv(path/'zone_temp_interior_celsius.csv')
+zone_temp_exterior = pd.read_csv(path/'zone_temp_exterior.csv')
+zone_temp_exterior_celsius = (zone_temp_exterior.drop('date', axis = 1) -32) * 5/9
+zone_temp_exterior_celsius['date'] = zone_temp_exterior['date']
+zone_temp_exterior_celsius.to_csv(path/'zone_temp_exterior_celsius.csv')
 
 try:
     energy_df = pd.read_csv(path/'energy.csv')
