@@ -2,6 +2,7 @@
 from utils import MAIN_DIR
 import torch
 from model.cnn_enc_dec_attn import CNNEncDecAttn
+from model.seq2seq_attn import Seq2SeqAttn
 from torch.utils.data import DataLoader
 from data.dataset import Dataset
 from pathlib import Path
@@ -63,9 +64,9 @@ temp_train_loader = DataLoader(temp_train_ds, batch_size=64, collate_fn=collate_
 temp_valid_loader = DataLoader(temp_valid_ds, batch_size=64, collate_fn=collate_fn, num_workers=24)
 
 
-def trainer_tuning(config,l_f, col_out, train_loader, valid_loader, num_epochs, num_gpus, log_path):
+def trainer_tuning(config,model_class,  train_loader, valid_loader, num_epochs, num_gpus, log_path, kwargs_model):
     
-    model = CNNEncDecAttn(l_f, col_out, config)
+    model = model_class(config = config, **kwargs_model)
     kwargs = {
         "max_epochs": num_epochs,
         "gpus": num_gpus,
@@ -94,25 +95,25 @@ def trainer_tuning(config,l_f, col_out, train_loader, valid_loader, num_epochs, 
     trainer.fit(model, train_loader, valid_loader)
 
 
-def tuner(train_loader, valid_loader, col_out, config, name, log_path):
+def tuner(model_class, train_loader, valid_loader, config, name, log_path, kwargs_model):
 
     num_epochs = 50
     
 
     train_fn_with_parameters = tune.with_parameters(trainer_tuning,
-                                                    l_f=len_forecast,
-                                                    col_out=col_out,
+                                                    model_class = model_class,
                                                     train_loader=train_loader,
                                                     valid_loader=valid_loader,
                                                     num_epochs=num_epochs,
                                                     num_gpus=1,
-                                                    log_path=log_path
+                                                    log_path=log_path,
+                                                    kwargs_model=kwargs_model
                                                     )
 
     tuner = tune.Tuner(
         tune.with_resources(
             train_fn_with_parameters,
-            resources={"cpu": 28, "gpu": 1}
+            resources={"cpu": 14, "gpu": 1}
         ),
         tune_config=tune.TuneConfig(
             metric="val_loss",
@@ -158,6 +159,5 @@ config = {
 }
 
 
-tuner(energy_train_loader, energy_valid_loader, 1, config, 'energy', main_dir/'tuning'/'cnn_lstm')
-tuner(temp_train_loader, temp_valid_loader, len(col_out_temp),
-      config, 'temp', main_dir/'tuning'/'cnn_lstm')
+tuner(CNNEncDecAttn,energy_train_loader, energy_valid_loader,config, 'energy', main_dir/'tuning'/'cnn_bilstm',  kwargs_model = {'len_forecast':len_forecast, 'col_out':1, 'bidirectional' : True})
+tuner(CNNEncDecAttn,temp_train_loader, temp_valid_loader, config, 'temp', main_dir/'tuning'/'cnn_bilstm',kwargs_model = {'len_forecast':len_forecast, 'col_out':len(col_out_temp), 'bidirectional' : True})

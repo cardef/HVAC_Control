@@ -3,9 +3,9 @@ import torch
 
 class Encoder(nn.Module):
     
-    def __init__(self, input_size, hidden_size, num_layers):
+    def __init__(self, input_size, hidden_size, num_layers, bidirectional = False):
         super(Encoder, self).__init__()
-        self.enc = nn.GRU(batch_first = True, input_size = input_size, hidden_size = hidden_size, num_layers = num_layers)
+        self.enc = nn.GRU(batch_first = True, input_size = input_size, hidden_size = hidden_size, num_layers = num_layers, bidirectional=bidirectional)
         
     def forward(self, input):
    
