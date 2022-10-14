@@ -19,6 +19,10 @@ app = Dash(__name__)
 en_res = pd.read_csv(MAIN_DIR/'results'/'outputs'/'energy_prediction.csv', header = [0,1], index_col=[0])
 en_res = en_res['hvac'].reset_index().melt(id_vars = ['date'], value_vars = ['true', 'pred'])
 en_plot = px.line(en_res, x="date", y="value", color="Type")
+
+en_opt = pd.read_csv(MAIN_DIR/'results'/'opt'/'comparison'/'energy_res_df.csv', header = [0,1], index_col=[0])
+en_opt = en_opt['hvac'].reset_index().melt(id_vars = ['date'], value_vars = ['true', 'opt'])
+en_opt_plot = px.line(en_opt, x="date", y="value", color="Type")
 app.layout = html.Div(children = [
     html.Div([
         html.H4('Energy forecasting'),
@@ -35,6 +39,11 @@ app.layout = html.Div(children = [
             clearable=False,
         ),
     ]),
+    
+    html.Div([
+        html.H4('Energy Optimization'),
+        dcc.Graph(id="en-opt-time-series-chart", figure = en_opt_plot),
+    ]),
 ])
 
 
@@ -49,4 +58,4 @@ def display_time_series(ticker):
     return fig
 
 
-app.run_server(debug=True, port = 8050)
+app.run_server(debug=True, port = 8057)

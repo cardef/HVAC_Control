@@ -105,7 +105,7 @@ def tuner(model_class, train_loader, valid_loader, config, name, log_path, kwarg
                                                     train_loader=train_loader,
                                                     valid_loader=valid_loader,
                                                     num_epochs=num_epochs,
-                                                    num_gpus=1,
+                                                    num_gpus=0,
                                                     log_path=log_path,
                                                     kwargs_model=kwargs_model
                                                     )
@@ -113,7 +113,7 @@ def tuner(model_class, train_loader, valid_loader, config, name, log_path, kwarg
     tuner = tune.Tuner(
         tune.with_resources(
             train_fn_with_parameters,
-            resources={"cpu": 14, "gpu": 1}
+            resources={"cpu": 1, "gpu": 0}
         ),
         tune_config=tune.TuneConfig(
             metric="val_loss",

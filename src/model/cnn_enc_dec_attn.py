@@ -1,6 +1,6 @@
 from torch import nn
 import torch
-from model.layers import attndecoder, conv1d, encoder, fcc
+from model.layers import attndecoder, conv1d, encoder, fcc, res_encoder
 import pytorch_lightning as pl
 
 class CNNEncDecAttn(pl.LightningModule):
@@ -17,8 +17,9 @@ class CNNEncDecAttn(pl.LightningModule):
         self.p_dropout_fc = config['p_dropout_fc']
         self.conv1d = conv1d.Conv1d(zip(config['conv_features'], config['conv_kernels']))
         self.dropout_conv = nn.Dropout(self.p_dropout_conv)
+        self.res_encoder = res_encoder.ResEncoder(config['conv_features'][-1], config['conv_features'][-1])
         self.encoder = encoder.Encoder(config['conv_features'][-1], self.hidden_size_enc, 1, bidirectional)
-        self.decoder = attndecoder.AttnDecoder(self.hidden_size_enc*self.D, self.hidden_size_enc*self.D)
+        self.decoder = attndecoder.AttnDecoder(config['conv_features'][-1]*self.D, config['conv_features'][-1]*self.D)
         self.fcc = fcc.FCC(config["linear_neurons"], self.p_dropout_fc)
         self.output = nn.LazyLinear(self.col_out)
         self.scheduler_patience = scheduler_patience
@@ -30,7 +31,19 @@ class CNNEncDecAttn(pl.LightningModule):
         x = x.transpose(1,2)
         x = self.conv1d(x)
         x = self.dropout_conv(x)
-        x, h = self.encoder(x.transpose(1,2))
+        x = x.transpose(1,2)
+        out_enc = [torch.zeros(64,x.size(2))] * x.size(1)
+        print(x.size(1))
+        for i in range(0, x.size(1)):
+            try:
+                hidden = out_enc[i-1]
+            except:
+                hidden = torch.zeros(64, x.size(2))
+            
+            out_enc[i] = self.res_encoder(x[:,i,:].squeeze(1), hidden)
+            
+        x = torch.stack(out_enc, dim = 1)
+        #x, h = self.encoder(x.transpose(1,2))
 
         out = [None] * self.len_forecast
         out[0] = self.decoder(x[:,-1,:].squeeze(1), x)
